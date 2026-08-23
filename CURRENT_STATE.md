@@ -1,339 +1,263 @@
 # Current state
 
-**Audit date:** 2026-08-23 · **Branch:** `claude/old-website-reference-0rjnyp` · **HEAD:** `6b33fad`
-**Working tree:** clean · **`main`:** still at the initial commit — nothing here has been merged.
+**Last verified:** 2026-08-23 · **Branch:** `claude/old-website-reference-0rjnyp`
+**`main`:** still at the initial commit — nothing here has been merged.
 
-This file is an *audit*, not a status report written from memory. Every claim
-below was re-verified against the repository in this session by running the
-build, the tests, the migrations and the bundler. Where something could not be
-verified without a credential or a live service, it says so rather than
-assuming success.
+Every claim below was checked by running something, not by remembering.
+Where a thing cannot be verified without a credential or a live service, it
+says so rather than assuming.
 
-Nothing was deleted or rewritten to produce this document.
-
-### Resolved since the audit ran (commit `f412845`)
-
-The audit itself is unchanged below; these items were fixed immediately
-afterwards and are marked **fixed** where they appear.
-
-- Story creation now pre-checks the **whole** book's credit cost, so a
-  parent can no longer start a story that dies partway through. The credit
-  *values* remain yours to set.
-- The TWA and the native app no longer share a package name.
-- CI added and **green on its first run**: types, lint, tests, build,
-  migrations + SQL assertions, and the Metro bundle — none of it needing a
-  credential.
-- `npm run check:env` added: validates a real environment, and with
-  `--probe` confirms each service answers, without printing a value.
-- `docs/LAUNCH-READINESS.md` added.
-- Three broken or stale npm scripts fixed (`db:migrate` pointed at a
-  non-existent file, `lint` used the removed `next lint`, the type
-  generator had no entry).
-- `docs/MOBILE.md` reordered to native-first; `docs/ROUTES.md` now covers
-  `/api/v1`; `.env.example` documents `DATABASE_URL`.
+**Nothing is deployed.** No hosted URL, no Supabase project, no OpenAI key in
+use. That remains the single blocker in front of everything commercial.
 
 ---
 
-## 0. What was actually run
+## What was actually run
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Web types | `npx tsc --noEmit` | **exit 0** |
-| Web lint | `npx eslint .` | **exit 0** |
-| Web tests | `npx vitest run` | **151 passed**, 10 files |
-| Web build | `npx next build` | **succeeds**, 47 app routes |
-| Database | 9 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
-| Database assertions | `supabase/tests/0001_security_and_credits.test.sql` | **"database assertions passed"** |
-| Mobile types | `npx tsc --noEmit` (in `mobile/`) | **exit 0** |
-| Mobile bundle | `npx expo export --platform web` | **bundles**, 915 modules, 15 routes |
+| Web types | `npm run typecheck` | **exit 0** |
+| Web lint | `npm run lint` | **exit 0** |
+| Web tests | `npm test` | **177 passed**, 12 files |
+| Web build | `npm run build` | **succeeds**, 48 routes |
+| Database | 10 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
+| Database assertions | `npm run db:verify` | **"database assertions passed"** |
+| Mobile types | `npx tsc --noEmit` in `mobile/` | **exit 0** |
+| Mobile bundle | `npx expo export` | **bundles**, 1027 modules, 15 routes |
+| Expo config | `npx expo config --type public` | **resolves**, all 8 plugins |
+| CI | GitHub Actions | **green on its first run** |
 
-Schema introspected after migration: **29 tables, 29 with RLS enabled, 43
-policies, 18 enums, 101 indexes**. Seeds: 4 languages, 16 themes, 15 learning
-objectives, 6 illustration styles, 6 voices, 9 `app_settings` rows, 7 products.
-
-Size: 151 TypeScript files / 19,536 lines (web), 18 files / 3,008 lines
-(mobile), 11 SQL files / 3,105 lines, 10 test files plus a shared helper /
-1,671 lines.
+Schema after migration: **31 tables, all with RLS, 46 policies**.
+Seeds: 4 languages, 16 themes, 15 objectives, 6 styles, 6 voices,
+9 `app_settings` rows, 7 products.
 
 ---
 
-## 1. Verified working
+## 1. Production-ready
 
-Proven in this session by execution, not by inspection.
+Complete, tested, and needing nothing further from anyone. Still unproven
+against live services — see §2 — but nothing about them is waiting on a
+decision or a key.
 
-**Database and security.** All nine migrations apply from empty and are
-re-runnable. Every public table carries RLS. The SQL assertion suite proves,
-against a live database: cross-tenant isolation on stories and children;
-that **admins read zero children** (deliberate — staff support does not need a
-child's name or appearance); that a non-admin cannot escalate `role`,
-`credit_balance` or `email` by updating their own profile row; that
-`record_credit_transaction` returns the original balance on an idempotency-key
-replay instead of double-crediting; that an overdraft is refused with
-`insufficient_credits`; that `get_shared_story` returns a redacted payload
-without an anonymous visitor ever touching `stories`, `children` or
-`profiles`; that a job can be claimed exactly once under concurrency; and that
-rate limiting counts correctly.
+**Database and security.** Ten migrations apply from empty and re-run
+cleanly. Every public table carries RLS. The SQL assertion suite proves,
+against a live database: cross-tenant isolation; that **admins read zero
+children**; that a non-admin cannot escalate `role`, `credit_balance` or
+`email`; that `record_credit_transaction` is idempotent under a replayed
+key; that overdrafts are refused; that `get_shared_story` redacts without an
+anonymous visitor touching `stories`, `children` or `profiles`; that a job is
+claimed exactly once under concurrency; and that rate limiting counts.
 
-**Web application.** Typechecks under `strict` plus `noUncheckedIndexedAccess`,
-lints clean, and builds. 47 routes: 8 public/marketing, 4 auth, 7 signed-in,
-4 admin, 4 pre-existing API routes, 13 `/api/v1`, plus manifest, sitemap,
-robots, the offline page, Digital Asset Links and the two framework error
-routes.
+**One implementation per rule.** `src/features/stories/operations.ts` and
+`src/features/account/operations.ts` hold the only implementation of every
+mutation. Server actions (web) and `/api/v1` routes (mobile) are both thin
+wrappers. The mobile app reproduces **no** authorization and **no** charging
+logic — verified by reading `mobile/src/api.ts`, which only issues HTTP.
 
-**Unit-tested logic.** 151 tests over cost arithmetic and credit rules, the
-`/api/v1` handler layer, error classification, the four locale dictionaries,
-narration timing, the PDF renderer, prompt construction, PWA/asset-links
-behaviour, story-privacy serialisation, and input validation.
+**The job queue is scheduler-agnostic.** Nothing in the worker knows what
+woke it. Vercel Cron, Supabase `pg_cron` via `pg_net`, a GitHub Action, a
+container crontab and an uptime pinger all satisfy the same contract, and
+`docs/OPERATIONS.md` carries working configuration for each. Three
+properties make that real rather than aspirational: claiming is atomic, so
+any number of simultaneous triggers is harmless; a run that ends with work
+still due wakes its own successor, bounded at twenty links, so cadence
+decides when a book *starts* and never whether it finishes; and retries and
+reaping are keyed to absolute timestamps, so a missed tick costs latency and
+no work. The Vercel-shaped limits are request parameters clamped to the
+host's own timeout, not constants in the code path.
 
-**Shared business logic, not duplicated.** `src/features/stories/operations.ts`
-holds the single implementation of every story mutation. `actions.ts` (server
-actions, used by the web) and the `/api/v1` routes (used by the native app) are
-both thin wrappers over it. The mobile app reproduces **no** authorization and
-**no** charging logic — verified by reading `mobile/src/api.ts`, which only
-issues HTTP calls.
+**Full-cost pre-check on story creation.** Illustrations are charged per
+image and a story fans out to one per page plus a cover, so checking only
+the text cost let a parent start a book that died partway through. Creation
+now estimates the whole book. Four tests cover it.
 
-**Secrets discipline.** `src/config/env.ts` splits a client schema (only
-`NEXT_PUBLIC_*`) from a lazy `serverEnv()` that throws if it is ever reached
-from a browser. The OpenAI SDK is imported in five server-only modules. No
-secret appears in the repository; `.env.local` contains placeholders only.
+**Push notifications, everything except the last hop.** Device registration
+keyed so a shared tablet cannot keep notifying the previous family; a unique
+`dedupe_key` so twelve finishing illustration jobs produce one notification,
+not twelve; preferences and quiet hours, including the window that wraps
+past midnight. Delivery is behind a provider interface, and without
+credentials the console provider composes, dedupes, checks preferences and
+logs — recording the delivery as `skipped` with `reason: provider_not_live`.
+Nothing reaches a phone and nothing pretends to.
 
-**Photo upload is off.** `child_photo_upload_enabled` defaults to `false`, no
-upload UI exists in web or mobile, `photo_storage_path` is stripped by the
-child serialiser and redacted by the logger, and the privacy and FAQ pages
-state plainly that photographs are not held. This matches the standing
-instruction and has not been changed.
+**The native app in four languages.** Azerbaijani, English, Russian and
+Turkish, resolved from the in-app choice, then the profile, then the phone.
+Interface language and story language stay separate. A test asserts key
+parity, placeholder survival, and that no locale is English pasted across.
 
-**Mobile app compiles and bundles.** Expo SDK 57 / React Native 0.86.2 /
-React 19.2.3, 15 routes, expo-router typed routes, background audio declared,
-SecureStore session chunking, offline download of *bytes* rather than signed
-URLs.
+**Full child profiles on the phone**, matching the website field for field —
+gender, favourite activities, personality traits and learning interests were
+accepted by the API and silently missing from the form.
+
+**Photo upload is off.** `child_photo_upload_enabled` defaults to `false`,
+no upload UI exists on either surface, `photo_storage_path` is stripped by
+the serialiser and redacted by the logger, and the privacy page and the
+mobile child form both say plainly that no photograph is held.
+
+**Offline books that survive a real phone.** The index is verified against
+the filesystem rather than believed, a partial download says so and resumes
+instead of being recorded as complete, and sign-out deletes the lot.
+
+**Lock-screen playback.** Title and cover artwork on the lock screen — which
+on Android is also what stops the OS killing background audio after three
+minutes.
+
+**Secrets discipline.** `src/config/env.ts` splits a client schema from a
+lazy `serverEnv()` that throws if reached from a browser. The OpenAI SDK is
+imported in five server-only modules. No secret is in the repository.
+`npm run check:env` validates a real environment, and with `--probe` calls
+each service once, without printing a value.
+
+**CI.** Types, lint, tests, build, migrations with their SQL assertions, and
+the Metro bundle — none of it needing a credential. Green on its first run.
 
 ---
 
-## 2. Implemented but never run against a live service
+## 2. Built, but never run against a live service
 
 The code exists and is unit-tested against fakes. It has **never** executed
-against real OpenAI, real Supabase, or real storage. Treat every item here as
-unproven in production.
+against real OpenAI, real Supabase, or real storage. Treat every item here
+as unproven in production.
 
 | Area | What is unproven |
 | --- | --- |
-| Story text generation | The Responses API call with a strict `json_schema`, the fallback model path, output moderation, and page splitting |
+| Story text | The Responses API call with a strict `json_schema`, the fallback model, output moderation, page splitting |
 | Illustrations | `gpt-image-1` calls, the character-sheet consistency approach, content-hash reuse, storage upload |
 | Narration | `gpt-4o-mini-tts` output, and whether estimated per-page timings track real audio closely enough to follow pages |
-| PDF export | Rendering runs in tests, but never over *real* generated illustrations at print resolution |
-| Job worker | Claim/retry/dead-letter under real concurrency and real provider latency |
-| Auth flows | Sign-up, magic link, password reset and OAuth callback against a real Supabase project |
-| Storage | Bucket policies, signed-URL TTLs, and the delete-account sweep |
-| Mobile end-to-end | Sign-in → create → read → narrate → offline, against a real backend, on a real device |
+| PDF export | Renders in tests, never over *real* illustrations at print resolution |
+| Job worker | Claim, retry and dead-letter under real concurrency and real provider latency |
+| Auth flows | Sign-up, magic link, password reset, OAuth callback against a real Supabase project |
+| Storage | Bucket policies, signed-URL lifetimes, the delete-account sweep |
+| Mobile end to end | Sign-in → create → read → narrate → offline, on a real device |
 | Cost accounting | Recorded micro-USD has never been compared against a real OpenAI invoice |
+| Push delivery | Everything up to the provider call is exercised; APNs and FCM are not |
 
 ---
 
-## 3. Incomplete
+## 3. Blocked on credentials
 
-Real work, deliberately unfinished, not blocked by anyone else.
+Each row: the service, the value, where to get it, where it goes, and how to
+confirm it without printing the secret.
 
-- **No deployment of any kind.** No `.vercel` link, no CI, no hosted URL. The
-  application has never been served anywhere but localhost. `vercel.json`
-  declares a `* * * * *` worker cron, which needs a paid Vercel plan — the
-  Hobby tier restricts cron frequency. Confirm against Vercel's current plan
-  limits when the project is created.
-- **No CI.** ~~No `.github/` directory.~~ **Fixed and green** —
-  `.github/workflows/ci.yml` runs types, lint, tests, build, the migrations
-  with their SQL assertions, and the Metro bundle. All three jobs passed on
-  their first run ([run 32652573597](https://github.com/tnhasanov/Nagilai/actions/runs/32652573597)),
-  so the migrations are now proven against a stock `postgres:16` container as
-  well as against the local harness.
-- **Mobile is English-only.** The four locale dictionaries exist on the web;
-  the native app hardcodes English strings and only forwards a `locale` to the
-  catalogue endpoint. Azerbaijani is the primary market.
-- **Mobile child form is thinner than the web one.** It collects name,
-  nickname, age, language, interests, animals, colour, appearance and notes,
-  but omits `gender`, `favouriteActivities`, `personalityTraits` and
-  `learningInterests` — all of which the API and database accept and the story
-  prompt uses. Profiles created on mobile therefore produce less personalised
-  stories.
-- **No push notifications.** `expo-notifications` is not a dependency.
-  Generation takes minutes; there is currently no way to tell a parent their
-  book is ready unless the app is open.
-- **Only email/password sign-in on mobile.** No Google, no Apple. (Adding
-  Google without Apple would breach App Store guideline 4.8, so these ship
-  together or not at all.)
-- **No story-quality evaluation.** Nothing checks that generated stories are
-  age-appropriate, in the right language, or actually good. For a children's
-  product this is the highest-value missing test.
-- ~~**`docs/MOBILE.md` leads with the Trusted Web Activity.**~~ **Fixed** —
-  reordered so the native app is the primary path and the TWA is an optional
-  extra at the end.
-- ~~**`docs/ROUTES.md` predates the mobile API.**~~ **Fixed** — all 13
-  `/api/v1` endpoints are documented, with the bearer-token and CORS
-  reasoning.
-- ~~**`.env.example` omits `DATABASE_URL`.**~~ **Fixed.**
-- **Three npm scripts were broken or stale** — `db:migrate` pointed at a file
-  that does not exist, `lint` used the `next lint` command Next 16 removed,
-  and the type generator had no entry. **Fixed**, and `check` now runs lint.
+### 3.1 Needed to deploy at all
+
+| # | Service | Value | Where to obtain it | Where it goes | Verify |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project → Settings → API | `.env.local`, Vercel | `npm run check:env -- --probe` |
+| 2 | Supabase | `SUPABASE_SERVICE_ROLE_KEY` | Same page, `service_role` | Server-side only, never `NEXT_PUBLIC_` | Probe reports the schema is present and seeded |
+| 3 | Supabase | `DATABASE_URL` | Project → Connect | Local shell only | `npm run db:types` regenerates with no diff |
+| 4 | OpenAI | `OPENAI_API_KEY` | platform.openai.com → API keys | Server-side only | Probe reports "key accepted" |
+| 5 | Worker | `CRON_SECRET` | `openssl rand -hex 32` | Server env + scheduler | `/api/jobs/worker` returns 401 without, 200 with |
+| 6 | Vercel | Account + project link | vercel.com | `vercel link` | A deployment URL serves `/` |
+
+**Also required, and not a credential:** *some* scheduler must call
+`/api/jobs/worker`. Any of the four in `docs/OPERATIONS.md` will do. With
+none, generation silently never starts.
+
+### 3.2 Needed for the native app
+
+| # | Service | Value | Where | Goes in |
+| --- | --- | --- | --- | --- |
+| 7 | Expo | EAS project id | `eas init` in `mobile/` | `mobile/app.json` → `extra.eas.projectId` |
+| 8 | Apple | Developer Program, $99/yr | developer.apple.com | EAS credentials |
+| 9 | Google Play | Developer account, $25 once | play.google.com/console | Play Console |
+| 10 | Apple | APNs key | developer.apple.com → Keys | `eas credentials` → iOS → Push Key |
+| 11 | Firebase | Service account JSON | Firebase → Service accounts | `eas credentials` → Android → FCM V1 |
+| 12 | Server | `EXPO_PUSH_ENABLED=true` | — | Web app environment |
+| 13 | Google Cloud | Three OAuth client ids + one secret | Console → Credentials | `mobile/.env.example` names each one; the secret goes to Supabase only |
+| 14 | Apple | Services ID, key, team id | developer.apple.com | Supabase → Auth → Providers → Apple |
+| 15 | App Store Connect | App id | After creating the app record | `mobile/eas.json` → `submit.production.ios.ascAppId` |
+
+`docs/MOBILE.md` has the full walkthrough for 7–15.
+
+Note on this environment: `eas init` and `expo-doctor` cannot run here — the
+agent proxy blocks Expo's endpoints. Run them from your own machine.
+
+### 3.3 Needed later
+
+| # | Service | Value | For |
+| --- | --- | --- | --- |
+| 16 | Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Payments, and **only after pricing is decided** |
+| 17 | Resend | `RESEND_API_KEY` | Transactional email; a logged no-op without it |
 
 ---
 
-## 4. Placeholder or mock
-
-Present so the shape is right, but not real.
+## 4. Placeholder or unverified
 
 | Thing | Current value | Why it matters |
 | --- | --- | --- |
-| `mobile/app.json` → `extra.eas.projectId` | `00000000-0000-0000-0000-000000000000` | No EAS build can run until `eas init` writes a real id |
-| `mobile/eas.json` → API URLs | `https://nagilai.com`, `https://staging.nagilai.com` | Neither host exists yet |
-| `app_settings.ai_pricing` | Estimated rate card, self-labelled "VERIFY before relying on these figures" | Every cost figure and margin in the product derives from it |
-| Stripe webhook | Verifies the signature and records the event; **grants no credits or entitlements** | Correct for now — deliberately not wired ahead of a pricing decision |
-| Print provider | `PRINT_PROVIDER=manual`; orders land in an admin queue | No printer has been chosen; no real costs or SLAs are claimed anywhere |
-| `products` seed | 7 rows with placeholder prices | Prices are the owner's decision, not an assumption to make |
-| Legal pages | `/privacy` and `/terms` are drafts written from the architecture | Not reviewed by anyone qualified |
-| `ANDROID_PACKAGE_NAME` example | ~~`com.nagilai.app`~~ → `com.nagilai.twa` | **Fixed** — the collision would have let the wrapper permanently claim the native app's identity |
+| `mobile/app.json` → `extra.eas.projectId` | `00000000-…` | Recognised as absent: no push token is requested, no permission prompt appears |
+| `mobile/eas.json` → API URLs | `nagilai.com`, `staging.nagilai.com` | Neither host exists |
+| `mobile/eas.json` → `ascAppId` | `REPLACE_WITH_…` | Needed only at submission |
+| `app_settings.ai_pricing` | Estimated rate card, self-labelled "VERIFY" | Every cost figure derives from it |
+| Stripe webhook | Verifies and records; **grants no entitlements** | Correct for now — deliberately not wired ahead of a pricing decision |
+| Print provider | `manual`; orders land in an admin queue | No printer chosen; no real costs or SLAs are claimed |
+| `products` seed | 7 rows, placeholder prices | Yours to set |
+| Legal pages | `/privacy` and `/terms` are drafts | Not reviewed by anyone qualified |
 
 ---
 
-## 5. Blocked
+## 5. Blocked on your decision
 
-### 5.1 Blocked on credentials
-
-Each entry states the service, the value, where to get it, where to put it, and
-how to confirm it works without printing the secret.
-
-| # | Service | Value | Where to obtain it | Where it goes | Verify without exposing it |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project → Settings → API | `.env.local`, then Vercel project env | `npm run dev` and load `/login`; a bad key throws at boot |
-| 2 | Supabase | `SUPABASE_SERVICE_ROLE_KEY` | Same page, "service_role" | Server-side env **only** — never `NEXT_PUBLIC_` | Run the worker endpoint; it needs admin access to claim a job |
-| 3 | Supabase | `DATABASE_URL` (pooler connection string) | Project → Connect | Local shell only | `npm run db:types` regenerates `src/types/database.ts` with no diff |
-| 4 | OpenAI | `OPENAI_API_KEY` | platform.openai.com → API keys | Server-side env only | Create one story; `ai_usage_events` gains a row with a non-zero cost |
-| 5 | Worker | `CRON_SECRET` | `openssl rand -hex 32` | Server env + Vercel Cron header | `GET /api/jobs/worker` without it returns 401; with it, 200 |
-| 6 | Vercel | Account + project link | vercel.com | `vercel link` | A deployment URL exists and serves `/` |
-| 7 | Expo | EAS project id | `eas init` in `mobile/` | `mobile/app.json` → `extra.eas.projectId` | `eas build --profile preview --platform android` starts |
-| 8 | Apple | Developer Program membership ($99/yr) | developer.apple.com | EAS credentials | `eas credentials` lists a signing identity |
-| 9 | Google Play | Developer account ($25 once) | play.google.com/console | Play Console | The app record accepts an internal-testing upload |
-| 10 | Stripe *(later)* | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe dashboard | Server env | Webhook test event returns 200 and inserts one `payments` row |
-
-Note on this environment: `eas init` and `npx expo-doctor` cannot run here —
-the agent proxy returns 403 for the Expo endpoints. They must be run from a
-machine with normal network access.
-
-### 5.2 Blocked on your decision
-
-These are yours, not mine. They are catalogued in `docs/DECISIONS.md` Part 1
-and are **not** being guessed at.
+Catalogued in `docs/DECISIONS.md` Part 1, and **not** being guessed at.
 
 1. **Customer pricing** — plan prices, credit bundles, free-tier size.
-2. **Children's privacy regime** — Azerbaijan-only vs GDPR/UK-AADC vs
-   US-COPPA. This changes consent flows, retention, and the legal pages.
-3. **Photograph upload** — stays off until you decide otherwise.
-4. **Printing partner** — nothing about print cost or delivery is real until
+2. **The credit defaults do not work as a free tier.** A new parent gets 3
+   credits; an illustrated ten-page story costs 12 (one for text, eleven for
+   images). They are now told cleanly up front instead of receiving a broken
+   book, but they still cannot make one. Needs: the signup grant, the
+   per-image cost, and whether the free story includes illustrations at all.
+   Best answered after §2 gives measured costs.
+3. **Children's privacy regime** — Azerbaijan-only vs GDPR/UK-AADC vs
+   US-COPPA. Changes consent flows, retention, and the legal pages.
+4. **Photograph upload** — stays off until you say otherwise.
+5. **Printing partner** — nothing about print cost or delivery is real until
    one is chosen.
-5. **Verified AI rate card** — the current numbers are estimates.
-6. **Illustration cost and default image count** — see gap #2 below; this is
-   the single biggest lever on unit economics.
-7. **Data residency** — which Supabase region.
-8. **Store submission** — nothing will be submitted without your approval.
+6. **Verified AI rate card** — the current numbers are estimates.
+7. **Illustration cost and default image count** — the largest lever on unit
+   economics. At the seeded rate, a medium story is roughly $0.46 of images.
+8. **Data residency** — which Supabase region, chosen before real users.
+9. **Store submission** — nothing will be submitted without your approval.
 
 ---
 
-## 6. Prioritized gap list
+## 6. Still to build
 
-Ordered by *what blocks the next real step*, not by size.
+Not blocked, not started.
 
-### P0 — blocks everything downstream
+**Before a trustworthy beta**
 
-**1. Nothing is deployed.** No live URL means no live AI test, no cost
-measurement, no beta, no store submission, no asset-links verification. Every
-other checkpoint depends on this one. *Needs: credentials 1–6.*
+- **Story-quality evaluation.** The most valuable missing test for a
+  children's product: are stories age-appropriate, actually in the requested
+  language, free of the banned phrasings, and good? Needs live generation to
+  write.
+- **Measured unit economics.** Cost reporting is wired end to end; every
+  number in it comes from an estimated rate card.
+- **A real support address** on `/contact`.
 
-**2. The default credit economics are internally inconsistent.** *(symptom
-fixed; the values are still yours)*
-`story_illustration` is charged **per image**, and a story generates one image
-per page **plus** a cover. With the seeded defaults a "medium" story is
-10 pages → 11 images → **1 + 11 = 12 credits**, while `signup_grant` is **3**.
-`create.ts` pre-checks only the *text* cost, so a new parent's first book
-would generate its text, produce two illustrations, and then fail the
-remaining nine jobs permanently — `insufficient_credits` is non-retryable, so
-those jobs dead-letter. The parent is left with a broken book.
+**Native completeness, remaining**
 
-At the seeded (unverified) rate card, `medium` quality `gpt-image-1` is
-$0.042/image, so those 11 images cost roughly **$0.46 per story** before text
-or narration. This is the material cost issue you asked to be flagged.
+- Remix, rename and delete in the app — the endpoints exist.
+- PDF export to the share sheet — the endpoint exists.
+- Per-page illustration retry — the endpoint exists.
+- A quiet-hours picker — the API accepts the values, the app only displays
+  them.
 
-Two separable fixes:
-- *Mine, no pricing implication:* **done.** Story creation now pre-checks the
-  full estimated cost (`estimateStoryCost`, covered by four tests), so a
-  parent is refused up front instead of receiving a half-generated book.
-- *Yours, still open:* the actual `signup_grant`, per-image cost, and default
-  image count. With today's values a new parent still cannot afford their
-  first illustrated story — they will now be told so cleanly rather than
-  discovering it through failed jobs, but the free tier does not work until
-  you set these. See `docs/LAUNCH-READINESS.md`.
+**Operational**
 
-**3. Package-name collision between the TWA and the native app.** **Fixed.**
-Both claimed `com.nagilai.app`; Play binds a package name permanently on first
-upload, so publishing the TWA under it would have blocked the native app
-forever. The native app keeps the name, the TWA example is now
-`com.nagilai.twa`, and `npm run check:env` fails if the collision is
-reintroduced. Nothing has been uploaded to Play, so this was caught in time.
-
-### P1 — blocks a trustworthy beta
-
-**4. No live AI integration test.** Nothing has ever called OpenAI. Model IDs,
-the strict `json_schema` shape, image quality, TTS voices and real latency are
-all unverified. *Needs: credential 4.*
-
-**5. No measured unit economics.** Cost reporting is wired end to end, but
-every number in it comes from an estimated rate card. Real prices come from
-generating real stories and comparing recorded micro-USD against the invoice.
-This is a prerequisite for any pricing conversation — and pricing is your
-decision, so I will bring measurements, not proposals.
-
-**6. No story-quality evaluation.** The one test that matters most for a
-children's product does not exist: are the stories age-appropriate, actually
-in the requested language, free of the banned phrasings, and good? Needs a
-small graded corpus run against live generation.
-
-**7. No CI.** **Fixed and verified green.** `.github/workflows/ci.yml` runs
-types, lint, tests, build, the migrations with their SQL assertions, and the
-Metro bundle — none of it needing a credential. First run: all three jobs
-passed, web in 1m14s, database in 47s, mobile in 1m04s.
-
-### P2 — native completeness before store submission
-
-**8. Push notifications** — generation is minutes long; parents need to be
-told when a book is ready.
-**9. Apple and Google Sign In** — together, per guideline 4.8.
-**10. Mobile localisation** — Azerbaijani, Russian and Turkish; the
-dictionaries already exist on the web and can be shared.
-**11. Mobile child form parity** — gender, activities, traits, learning
-interests.
-**12. Generation-status UX on mobile** — a real waiting room with per-page
-progress, matching the web.
-
-### P3 — documentation and hygiene
-
-**13.** ~~Re-order `docs/MOBILE.md`~~ — **done**.
-**14.** ~~Document `/api/v1` in `docs/ROUTES.md`~~ — **done**.
-**15.** ~~Add `DATABASE_URL` to `.env.example`~~ — **done**.
-**16.** Decide the Vercel plan, or change the worker cron to a schedule the
-Hobby plan allows. *Still open — it depends on the plan you buy.*
-
-### P4 — gated on your decisions
-
-**17.** Monetization wiring (gap: pricing approval).
-**18.** Physical books (gap: printer selection).
-**19.** Legal pages and consent flows (gap: privacy regime).
-**20.** Store submission (gap: your explicit approval).
+- Decide the Vercel plan, or change the worker cron to a schedule it allows.
+  (`vercel.json` asks for per-minute; the Hobby tier restricts frequency.
+  The self-continuation makes a slower tick correct, only less immediate.)
 
 ---
 
-## 7. What I did not do
+## 7. What I have not done
 
-- I did not start over, scaffold a second architecture, or replace any working
+- Not started over, scaffolded a second architecture, or replaced a working
   component.
-- I did not change pricing, credit values, image counts, or image quality.
-- I did not enable photo upload, public discovery, or any additional
-  retention.
-- I did not invent a printing partner, a printer cost, or an SLA.
-- I did not claim any deployment exists. None does.
+- Not changed pricing, credit values, image counts, or image quality.
+- Not enabled photo upload, public discovery, or additional retention.
+- Not invented a printing partner, a printer cost, or an SLA.
+- Not put a fake credential anywhere in the repository — every feature that
+  needs one hides itself instead.
+- Not claimed a deployment exists. None does.
