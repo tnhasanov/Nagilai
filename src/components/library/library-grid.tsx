@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BookOpen, Heart, Loader2, Share2, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toggleFavouriteAction } from '@/features/stories/actions';

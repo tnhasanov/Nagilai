@@ -5,6 +5,9 @@ import { supabaseAdmin } from '@/services/supabase/admin';
 import { getSetting } from '@/services/config/settings';
 import type { AiOperation } from '@/types/database';
 import type { UsageMetrics } from '@/services/ai/types';
+import type { SettingValue } from '@/services/config/settings';
+
+export type PricingTable = SettingValue<'ai_pricing'>;
 
 /**
  * AI usage and cost tracking (§17).
@@ -66,18 +69,31 @@ export async function recordUsage(input: RecordUsageInput): Promise<void> {
 }
 
 /**
- * Converts provider-native units into micro-USD.
- *
- * Returns zero rather than guessing when a model has no configured rate:
- * a visible zero in the admin cost report is a prompt to add the rate,
- * whereas an invented number quietly corrupts the margin figures.
+ * Converts provider-native units into micro-USD using the current rate
+ * card. Thin wrapper so the arithmetic itself stays pure and testable.
  */
 export async function estimateCost(
   operation: AiOperation,
   usage: UsageMetrics,
 ): Promise<{ costMicroUsd: number; unitCosts: Record<string, number> | null }> {
-  const pricing = await getSetting('ai_pricing');
+  return computeCost(operation, usage, await getSetting('ai_pricing'));
+}
 
+/**
+ * The cost arithmetic (§17).
+ *
+ * Returns zero rather than guessing when a model has no configured rate:
+ * a visible zero in the admin cost report is a prompt to add the rate,
+ * whereas an invented number quietly corrupts the margin figures.
+ *
+ * Cached input tokens are billed at their own lower rate, which matters
+ * once the story system prompt is being reused across a busy evening.
+ */
+export function computeCost(
+  operation: AiOperation,
+  usage: UsageMetrics,
+  pricing: PricingTable,
+): { costMicroUsd: number; unitCosts: Record<string, number> | null } {
   if (operation === 'text_generation') {
     const rate = pricing.text[usage.model];
     if (!rate) return { costMicroUsd: 0, unitCosts: null };

@@ -33,6 +33,10 @@ export default function ErrorBoundary({
       <div className="mt-8 flex gap-3">
         <Button onClick={reset}>Try again</Button>
         <Button variant="secondary" asChild>
+          {/* A full page load, not a client navigation: the boundary is
+              here because client state is already broken, and routing
+              within it would land in the same broken state. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/library">My Library</a>
         </Button>
       </div>

@@ -9,19 +9,28 @@ import { HARD_LIMITS } from '@/config/constants';
  * (§37: "validate API inputs").
  */
 
+/**
+ * A list of short free-text tags.
+ *
+ * Over-long lists are truncated rather than rejected: a parent who types
+ * fifteen interests has not made a mistake worth a form error, and the
+ * cap exists to bound the generation prompt, not to police them.
+ */
 const tagList = (max: number) =>
   z
     .array(z.string().trim().min(1).max(60))
-    .max(max)
     .default([])
     .transform((values) => {
       const seen = new Set<string>();
-      return values.filter((value) => {
+      const out: string[] = [];
+      for (const value of values) {
         const key = value.toLocaleLowerCase();
-        if (seen.has(key)) return false;
+        if (seen.has(key)) continue;
         seen.add(key);
-        return true;
-      });
+        out.push(value);
+        if (out.length >= max) break;
+      }
+      return out;
     });
 
 /** Accepts either a real array or the comma-separated string a form sends. */
