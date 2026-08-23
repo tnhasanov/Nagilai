@@ -1,0 +1,13 @@
+# The native app is not part of the website's deployment.
+#
+# Vercel would otherwise upload it and, because it carries its own
+# package.json, risk being treated as a monorepo workspace. Excluding it
+# keeps the build to what actually serves the site.
+mobile/
+
+# Nothing here runs on Vercel.
+supabase/
+docs/
+tests/
+scripts/
+.github/
