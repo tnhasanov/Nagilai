@@ -7,8 +7,13 @@ Every claim below was checked by running something, not by remembering.
 Where a thing cannot be verified without a credential or a live service, it
 says so rather than assuming.
 
-**Nothing is deployed.** No hosted URL, no Supabase project, no OpenAI key in
-use. That remains the single blocker in front of everything commercial.
+**Nothing is deployed** — no hosted URL, no OpenAI key in use.
+
+**The Supabase project exists.** Region `eu-central-1` (Frankfurt), and the
+full schema is applied to it: 31 tables, **0 without row-level security**,
+16 themes seeded, 5 storage buckets. Confirmed by query against the real
+project, not against a scratch container. That is the first thing in this
+build that is real rather than proven-in-a-harness.
 
 ---
 
@@ -157,9 +162,9 @@ confirm it without printing the secret.
 
 | # | Service | Value | Where to obtain it | Where it goes | Verify |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project → Settings → API | `.env.local`, Vercel | `npm run check:env -- --probe` |
+| 1 | Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project → Settings → API Keys | Vercel env vars | `npm run check:env -- --probe` |
 | 2 | Supabase | `SUPABASE_SERVICE_ROLE_KEY` | Same page, `service_role` | Server-side only, never `NEXT_PUBLIC_` | Probe reports the schema is present and seeded |
-| 3 | Supabase | `DATABASE_URL` | Project → Connect | Local shell only | `npm run db:types` regenerates with no diff |
+| 3 | Supabase | `DATABASE_URL` | Project → Connect | Local tooling only; not needed to deploy | `npm run db:types` regenerates with no diff |
 | 4 | OpenAI | `OPENAI_API_KEY` | platform.openai.com → API keys | Server-side only | Probe reports "key accepted" |
 | 5 | Worker | `CRON_SECRET` | `openssl rand -hex 32` | Server env + scheduler | `/api/jobs/worker` returns 401 without, 200 with |
 | 6 | Vercel | Account + project link | vercel.com | `vercel link` | A deployment URL serves `/` |
