@@ -18,14 +18,22 @@ use. That remains the single blocker in front of everything commercial.
 | --- | --- | --- |
 | Web types | `npm run typecheck` | **exit 0** |
 | Web lint | `npm run lint` | **exit 0** |
-| Web tests | `npm test` | **177 passed**, 12 files |
+| Web tests | `npm test` | **171 passed**, 11 files |
 | Web build | `npm run build` | **succeeds**, 48 routes |
 | Database | 10 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
 | Database assertions | `npm run db:verify` | **"database assertions passed"** |
-| Mobile types | `npx tsc --noEmit` in `mobile/` | **exit 0** |
-| Mobile bundle | `npx expo export` | **bundles**, 1027 modules, 15 routes |
+| Mobile types | `npm run typecheck` in `mobile/` | **exit 0** |
+| Mobile tests | `npm test` in `mobile/` | **20 passed** |
+| Mobile bundle | `npx expo export` | **bundles**, 1028 modules, 15 routes |
+| Mobile lockfile | `npm ci --dry-run` in `mobile/` | **exit 0** |
 | Expo config | `npx expo config --type public` | **resolves**, all 8 plugins |
-| CI | GitHub Actions | **green on its first run** |
+| CI | GitHub Actions, 3 jobs | **green** |
+
+The web suite was also run with `mobile/node_modules` deleted — the
+condition CI actually runs under — and passes. The two packages have
+separate test runners because their dependencies are separate; a test
+that imported across the boundary passed locally and failed in CI, which
+is the whole reason CI exists.
 
 Schema after migration: **31 tables, all with RLS, 46 policies**.
 Seeds: 4 languages, 16 themes, 15 objectives, 6 styles, 6 voices,
@@ -82,8 +90,12 @@ Nothing reaches a phone and nothing pretends to.
 
 **The native app in four languages.** Azerbaijani, English, Russian and
 Turkish, resolved from the in-app choice, then the profile, then the phone.
-Interface language and story language stay separate. A test asserts key
-parity, placeholder survival, and that no locale is English pasted across.
+Interface language and story language stay separate. The negotiation rules
+and dictionaries live in `mobile/src/i18n/locales.ts`, which imports nothing
+from React or Expo, and 20 tests cover them: key parity, placeholder
+survival, no locale being English pasted across, and the two-pass tag search
+that makes a phone listing `ru-KZ, az-AZ` get Azerbaijani exactly rather
+than Russian by approximation.
 
 **Full child profiles on the phone**, matching the website field for field —
 gender, favourite activities, personality traits and learning interests were
@@ -108,8 +120,10 @@ imported in five server-only modules. No secret is in the repository.
 `npm run check:env` validates a real environment, and with `--probe` calls
 each service once, without printing a value.
 
-**CI.** Types, lint, tests, build, migrations with their SQL assertions, and
-the Metro bundle — none of it needing a credential. Green on its first run.
+**CI.** Three jobs: web (types, lint, 171 tests, build), database (ten
+migrations, an idempotent replay, and the RLS/credit/job-queue assertions
+against a stock `postgres:16` container), and mobile (types, 20 tests, the
+Metro bundle). None of it needs a credential.
 
 ---
 
