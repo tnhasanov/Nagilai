@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+.expo-export/
+dist/
+web-build/
+*.log
+.DS_Store
+ios/
+android/
+.env.local

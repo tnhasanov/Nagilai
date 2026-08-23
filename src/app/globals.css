@@ -1,0 +1,364 @@
+@import 'tailwindcss';
+
+/* =====================================================================
+   Nagilai design system (§28)
+   =====================================================================
+   The brief: premium, warm, imaginative, trustworthy — and explicitly
+   *not* an enterprise dashboard, not ChatGPT, not a generic SaaS
+   template, and not a cheap children's game.
+
+   The resolution: build the whole interface as *paper*. Warm off-white
+   grounds, ink-brown text instead of grey-blue, soft shadows that read as
+   pages resting on a table rather than cards floating in a void. Colour
+   arrives from the illustrations, so the chrome stays quiet.
+
+   Parents are the buyers, children are the audience: the typography is
+   grown-up and bookish, while the shapes stay round and the motion stays
+   gentle.
+   ===================================================================== */
+
+@theme {
+  /* ---- Paper and ink -------------------------------------------- */
+  --color-paper: #fdfaf4;
+  --color-paper-raised: #fffdf9;
+  --color-paper-sunken: #f6efe4;
+  --color-ink: #2b2119;
+  --color-ink-soft: #6b5b4c;
+  --color-ink-faint: #9c8b7a;
+  --color-line: #eae0d3;
+  --color-line-strong: #ddcfbc;
+
+  /* ---- Accents ---------------------------------------------------
+     Amber is the single action colour. Plum carries night and bedtime,
+     sage carries safety and confirmation, rose carries favourites and
+     warnings. Nothing here is a saturated "brand blue". */
+  --color-amber: #d97e28;
+  --color-amber-deep: #b0611a;
+  --color-amber-soft: #fbeedd;
+  --color-plum: #4a3a6b;
+  --color-plum-soft: #ece8f5;
+  --color-sage: #4f7d5e;
+  --color-sage-soft: #e4efe6;
+  --color-rose: #c4576b;
+  --color-rose-soft: #fbe7ea;
+
+  /* ---- Type ------------------------------------------------------
+     Literata for anything that behaves like a book — headings, story
+     text, the printed PDF. Nunito for interface furniture. The app and
+     the printed book therefore share one typographic voice. */
+  --font-display: var(--font-literata), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* ---- Shape ------------------------------------------------------ */
+  --radius-card: 1.25rem;
+  --radius-tile: 1rem;
+  --radius-pill: 999px;
+
+  /* ---- Elevation --------------------------------------------------
+     Warm-tinted shadows. A neutral grey shadow on cream paper reads as
+     dirt; a brown one reads as depth. */
+  --shadow-page: 0 1px 2px rgba(64, 44, 24, 0.05), 0 8px 24px -12px rgba(64, 44, 24, 0.18);
+  --shadow-lift: 0 2px 4px rgba(64, 44, 24, 0.06), 0 18px 40px -18px rgba(64, 44, 24, 0.28);
+  --shadow-book: 0 4px 8px rgba(64, 44, 24, 0.08), 0 32px 64px -28px rgba(64, 44, 24, 0.4);
+
+  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.4s ease both;
+  --animate-drift: drift 14s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-twinkle: twinkle 4s ease-in-out infinite;
+  --animate-turn-next: turn-next 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-turn-back: turn-back 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0) rotate(2deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* Page turns. Two mirrored keyframes rather than one with a sign flip,
+   so the easing curve stays identical in both directions. */
+@keyframes turn-next {
+  from {
+    opacity: 0;
+    transform: translateX(28px) rotateY(-7deg) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes turn-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px) rotateY(7deg) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+/* =====================================================================
+   Dark mode
+   =====================================================================
+   Not an inverted greyscale: a warm night. The paper becomes the dark
+   brown of a bedroom after lights-out, and amber warms rather than
+   glares — this is an app people open at bedtime.
+   ===================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-paper: #171310;
+    --color-paper-raised: #221c17;
+    --color-paper-sunken: #100d0b;
+    --color-ink: #f5eee4;
+    --color-ink-soft: #c3b3a2;
+    --color-ink-faint: #8d7d6d;
+    --color-line: #362c24;
+    --color-line-strong: #4a3d32;
+    --color-amber: #eda05a;
+    --color-amber-deep: #f2b982;
+    --color-amber-soft: #33251a;
+    --color-plum: #a79ad0;
+    --color-plum-soft: #241f33;
+    --color-sage: #8dbb9c;
+    --color-sage-soft: #1c2a21;
+    --color-rose: #e08fa0;
+    --color-rose-soft: #2f1f24;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-paper: #171310;
+  --color-paper-raised: #221c17;
+  --color-paper-sunken: #100d0b;
+  --color-ink: #f5eee4;
+  --color-ink-soft: #c3b3a2;
+  --color-ink-faint: #8d7d6d;
+  --color-line: #362c24;
+  --color-line-strong: #4a3d32;
+  --color-amber: #eda05a;
+  --color-amber-deep: #f2b982;
+  --color-amber-soft: #33251a;
+  --color-plum: #a79ad0;
+  --color-plum-soft: #241f33;
+  --color-sage: #8dbb9c;
+  --color-sage-soft: #1c2a21;
+  --color-rose: #e08fa0;
+  --color-rose-soft: #2f1f24;
+}
+
+/* =====================================================================
+   Base
+   ===================================================================== */
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'kern', 'liga', 'calt';
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* A visible, on-brand focus ring everywhere. Keyboard users are not an
+     afterthought on a product families share between devices. */
+  :focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-amber-soft);
+    color: var(--color-ink);
+  }
+
+  /* Respect a reduced-motion preference: keep the interface calm rather
+     than removing feedback entirely. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* =====================================================================
+   Components
+   ===================================================================== */
+@layer components {
+  /* The paper grain. A single repeating SVG turbulence, at very low
+     opacity — enough that a large cream area reads as paper rather than
+     as a flat colour fill, cheap enough to sit behind everything. */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .grain::before {
+      mix-blend-mode: screen;
+      opacity: 0.05;
+    }
+  }
+
+  .card {
+    background-color: var(--color-paper-raised);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-page);
+  }
+
+  /* The warm halo behind the hero. Three offset radial gradients rather
+     than an image, so it scales to any viewport and costs nothing. */
+  .aurora {
+    background-image:
+      radial-gradient(ellipse 60% 50% at 15% 0%, color-mix(in oklab, var(--color-amber) 22%, transparent), transparent 70%),
+      radial-gradient(ellipse 50% 45% at 85% 10%, color-mix(in oklab, var(--color-plum) 18%, transparent), transparent 70%),
+      radial-gradient(ellipse 70% 40% at 50% 95%, color-mix(in oklab, var(--color-sage) 14%, transparent), transparent 75%);
+  }
+
+  /* Loading placeholder that reads as paper catching light, not as a
+     grey skeleton block. */
+  .shimmer {
+    background-image: linear-gradient(
+      100deg,
+      var(--color-paper-sunken) 20%,
+      color-mix(in oklab, var(--color-paper-raised) 92%, var(--color-amber)) 40%,
+      var(--color-paper-sunken) 60%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  /* Story prose. Slightly larger and looser than interface text — this is
+     text that gets read aloud. */
+  .prose-story {
+    font-family: var(--font-display);
+    font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.375rem);
+    line-height: 1.75;
+    letter-spacing: 0.003em;
+    color: var(--color-ink);
+  }
+
+  .prose-story p + p {
+    margin-top: 1em;
+  }
+
+  /* The spine shadow that makes a two-page spread read as a bound book. */
+  .book-spine {
+    background-image: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in oklab, var(--color-ink) 16%, transparent) 45%,
+      color-mix(in oklab, var(--color-ink) 22%, transparent) 50%,
+      color-mix(in oklab, var(--color-ink) 16%, transparent) 55%,
+      transparent
+    );
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Content width that keeps story text at a readable measure. */
+  .measure {
+    max-width: 62ch;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Safe-area padding for the reader's fixed controls on phones. */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
