@@ -20,8 +20,9 @@ afterwards and are marked **fixed** where they appear.
   parent can no longer start a story that dies partway through. The credit
   *values* remain yours to set.
 - The TWA and the native app no longer share a package name.
-- CI added: types, lint, tests, build, migrations + SQL assertions, and the
-  Metro bundle — none of it needing a credential.
+- CI added and **green on its first run**: types, lint, tests, build,
+  migrations + SQL assertions, and the Metro bundle — none of it needing a
+  credential.
 - `npm run check:env` added: validates a real environment, and with
   `--probe` confirms each service answers, without printing a value.
 - `docs/LAUNCH-READINESS.md` added.
@@ -138,9 +139,12 @@ Real work, deliberately unfinished, not blocked by anyone else.
   declares a `* * * * *` worker cron, which needs a paid Vercel plan — the
   Hobby tier restricts cron frequency. Confirm against Vercel's current plan
   limits when the project is created.
-- **No CI.** ~~No `.github/` directory.~~ **Fixed** — `.github/workflows/ci.yml`
-  runs types, lint, tests, build, the migrations with their SQL assertions,
-  and the Metro bundle. Unproven until it runs on GitHub for the first time.
+- **No CI.** ~~No `.github/` directory.~~ **Fixed and green** —
+  `.github/workflows/ci.yml` runs types, lint, tests, build, the migrations
+  with their SQL assertions, and the Metro bundle. All three jobs passed on
+  their first run ([run 32652573597](https://github.com/tnhasanov/Nagilai/actions/runs/32652573597)),
+  so the migrations are now proven against a stock `postgres:16` container as
+  well as against the local harness.
 - **Mobile is English-only.** The four locale dictionaries exist on the web;
   the native app hardcodes English strings and only forwards a `locale` to the
   catalogue endpoint. Azerbaijani is the primary market.
@@ -290,10 +294,10 @@ children's product does not exist: are the stories age-appropriate, actually
 in the requested language, free of the banned phrasings, and good? Needs a
 small graded corpus run against live generation.
 
-**7. No CI.** **Fixed** — `.github/workflows/ci.yml` runs types, lint, tests,
-build, the migrations with their SQL assertions, and the Metro bundle, none of
-it needing a credential. It has not yet run on GitHub, so treat it as
-implemented-but-not-live-tested until the first green run.
+**7. No CI.** **Fixed and verified green.** `.github/workflows/ci.yml` runs
+types, lint, tests, build, the migrations with their SQL assertions, and the
+Metro bundle — none of it needing a credential. First run: all three jobs
+passed, web in 1m14s, database in 47s, mobile in 1m04s.
 
 ### P2 — native completeness before store submission
 
