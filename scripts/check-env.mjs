@@ -87,6 +87,40 @@ const isUrl = (value) => {
 const looksLikePlaceholder = (value) =>
   /placeholder|your-|example\.com|^sk-\.\.\.$|xxx/i.test(value) ? 'looks like a placeholder' : null;
 
+/**
+ * Supabase issues keys in two shapes, and both are valid.
+ *
+ *   Legacy   — a JWT with the role baked into its claims.
+ *   Current  — `sb_publishable_…` and `sb_secret_…`, which are opaque.
+ *
+ * PostgREST accepts either in the `apikey` header. It does *not* accept a
+ * non-JWT in `Authorization: Bearer`, so the probes below send that header
+ * only when the key is actually a JWT.
+ */
+const isJwt = (value) => value.split('.').length === 3 && value.startsWith('ey');
+
+const supabaseHeaders = (key) => ({
+  apikey: key,
+  ...(isJwt(key) ? { Authorization: `Bearer ${key}` } : {}),
+});
+
+/** Catches the single most costly mix-up: the two keys swapped over. */
+const looksSecret = (value) =>
+  value.startsWith('sb_secret_') ||
+  (isJwt(value) && /"role"\s*:\s*"service_role"/.test(decodeJwtBody(value)));
+
+const looksPublishable = (value) =>
+  value.startsWith('sb_publishable_') ||
+  (isJwt(value) && /"role"\s*:\s*"anon"/.test(decodeJwtBody(value)));
+
+function decodeJwtBody(value) {
+  try {
+    return Buffer.from(value.split('.')[1], 'base64').toString('utf8');
+  } catch {
+    return '';
+  }
+}
+
 console.log('\nSite');
 const siteUrl = check({
   name: 'NEXT_PUBLIC_SITE_URL',
@@ -109,16 +143,22 @@ const supabaseUrl = check({
 const anonKey = check({
   name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   required: true,
-  where: 'Project -> Settings -> API -> anon',
-  validate: looksLikePlaceholder,
+  where: 'Project -> Settings -> API Keys (anon, or publishable)',
+  validate: (v) =>
+    looksLikePlaceholder(v) ??
+    // This one ships to browsers and phones. A service-role key here is
+    // the worst mistake available in this file: it would hand every
+    // visitor a key that bypasses row level security entirely.
+    (looksSecret(v) ? 'this is a SECRET key and would be published to every browser' : null),
 });
 const serviceKey = check({
   name: 'SUPABASE_SERVICE_ROLE_KEY',
   required: true,
-  where: 'Project -> Settings -> API -> service_role',
+  where: 'Project -> Settings -> API Keys (service_role, or secret)',
   validate: (v) =>
     looksLikePlaceholder(v) ??
-    (v === anonKey ? 'identical to the anon key - one of them is wrong' : null),
+    (v === anonKey ? 'identical to the anon key - one of them is wrong' : null) ??
+    (looksPublishable(v) ? 'this is the public key; the server needs the secret one' : null),
 });
 
 console.log('\nOpenAI');
@@ -173,17 +213,17 @@ if (!PROBE) {
   };
 
   if (supabaseUrl && anonKey) {
-    await probe('Supabase REST, anon key', async () => {
+    await probe('Supabase REST, public key', async () => {
       const response = await fetch(`${supabaseUrl}/rest/v1/`, {
-        headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        headers: supabaseHeaders(anonKey),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return 'reachable';
+      return isJwt(anonKey) ? 'reachable (legacy anon key)' : 'reachable (publishable key)';
     });
 
     await probe('Anonymous reads are blocked by RLS', async () => {
       const response = await fetch(`${supabaseUrl}/rest/v1/profiles?select=id&limit=1`, {
-        headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        headers: supabaseHeaders(anonKey),
       });
       const rows = response.ok ? await response.json() : [];
       if (Array.isArray(rows) && rows.length > 0) {
@@ -196,7 +236,7 @@ if (!PROBE) {
   if (supabaseUrl && serviceKey) {
     await probe('Supabase service role reads app_settings', async () => {
       const response = await fetch(`${supabaseUrl}/rest/v1/app_settings?select=key&limit=1`, {
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+        headers: supabaseHeaders(serviceKey),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status} - migrations may not be applied`);
       const rows = await response.json();
@@ -204,6 +244,18 @@ if (!PROBE) {
         throw new Error('table is empty - seed migration 0009 has not run');
       }
       return 'schema present and seeded';
+    });
+
+    await probe('Storage buckets exist', async () => {
+      const response = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+        headers: supabaseHeaders(serviceKey),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buckets = await response.json();
+      const names = new Set(Array.isArray(buckets) ? buckets.map((b) => b.name) : []);
+      const missing = ['illustrations', 'narrations', 'story-pdfs'].filter((n) => !names.has(n));
+      if (missing.length > 0) throw new Error(`missing: ${missing.join(', ')}`);
+      return `${names.size} buckets, all private except public-assets`;
     });
   }
 
