@@ -2,6 +2,7 @@ import 'server-only';
 
 import { errors } from '@/lib/errors';
 import { supabaseServer } from '@/services/supabase/server';
+import type { UserClient } from '@/services/supabase/user-client';
 import { supabaseAdmin } from '@/services/supabase/admin';
 import * as storage from '@/services/storage';
 import { STORAGE_BUCKETS } from '@/config/constants';
@@ -20,10 +21,15 @@ import type { Database, Json } from '@/types/database';
  * Reads go through the user-scoped client so RLS enforces ownership. The
  * only thing the service-role client is used for is minting signed URLs
  * for private storage objects, which RLS cannot do on the user's behalf.
+ *
+ * Each function takes an optional `db`: the web app omits it and gets the
+ * cookie session, the mobile API passes a client built from the caller's
+ * bearer token. One implementation serves both, so an ownership rule can
+ * only be wrong in one place.
  */
 
-export async function listLibrary(ownerId: string): Promise<LibraryCard[]> {
-  const supabase = await supabaseServer();
+export async function listLibrary(ownerId: string, db?: UserClient): Promise<LibraryCard[]> {
+  const supabase = db ?? (await supabaseServer());
 
   // Deliberately no embedded resources. `stories` has two relationships to
   // `story_illustrations` (the cover pointer and the story back-reference),
@@ -78,8 +84,12 @@ export async function listLibrary(ownerId: string): Promise<LibraryCard[]> {
 }
 
 /** Loads a story for the owner's reader, with signed asset URLs. */
-export async function getReaderStory(ownerId: string, storyId: string): Promise<ReaderStory> {
-  const supabase = await supabaseServer();
+export async function getReaderStory(
+  ownerId: string,
+  storyId: string,
+  db?: UserClient,
+): Promise<ReaderStory> {
+  const supabase = db ?? (await supabaseServer());
 
   const { data: story, error } = await supabase
     .from('stories')
@@ -197,6 +207,7 @@ export async function getReaderStory(ownerId: string, storyId: string): Promise<
 export async function getStoryProgress(
   ownerId: string,
   storyId: string,
+  db?: UserClient,
 ): Promise<{
   status: string;
   statusMessage: string | null;
@@ -205,7 +216,7 @@ export async function getStoryProgress(
   totalIllustrations: number;
   readyIllustrations: number;
 }> {
-  const supabase = await supabaseServer();
+  const supabase = db ?? (await supabaseServer());
 
   const { data: story } = await supabase
     .from('stories')

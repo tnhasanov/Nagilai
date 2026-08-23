@@ -2,6 +2,7 @@ import 'server-only';
 
 import { errors } from '@/lib/errors';
 import { supabaseServer } from '@/services/supabase/server';
+import type { UserClient } from '@/services/supabase/user-client';
 import type { Child } from '@/types/domain';
 
 /**
@@ -11,10 +12,15 @@ import type { Child } from '@/types/domain';
  * Level Security is the thing enforcing ownership. The `.eq('owner_id')`
  * filters are a second, explicit layer -- belt and braces on the most
  * sensitive table in the product.
+ *
+ * `db` is optional: the web app leaves it out and gets the cookie session,
+ * the mobile API passes a client built from the caller's bearer token.
+ * Both go through the same policies, so there is only one place an
+ * ownership rule can be wrong.
  */
 
-export async function listChildren(ownerId: string): Promise<Child[]> {
-  const supabase = await supabaseServer();
+export async function listChildren(ownerId: string, db?: UserClient): Promise<Child[]> {
+  const supabase = db ?? (await supabaseServer());
   const { data, error } = await supabase
     .from('children')
     .select('*')
@@ -26,8 +32,8 @@ export async function listChildren(ownerId: string): Promise<Child[]> {
   return data;
 }
 
-export async function getChild(ownerId: string, childId: string): Promise<Child> {
-  const supabase = await supabaseServer();
+export async function getChild(ownerId: string, childId: string, db?: UserClient): Promise<Child> {
+  const supabase = db ?? (await supabaseServer());
   const { data, error } = await supabase
     .from('children')
     .select('*')
@@ -39,8 +45,8 @@ export async function getChild(ownerId: string, childId: string): Promise<Child>
   return data;
 }
 
-export async function countChildren(ownerId: string): Promise<number> {
-  const supabase = await supabaseServer();
+export async function countChildren(ownerId: string, db?: UserClient): Promise<number> {
+  const supabase = db ?? (await supabaseServer());
   const { count, error } = await supabase
     .from('children')
     .select('id', { count: 'exact', head: true })
