@@ -152,7 +152,10 @@ export function StoryReader({
       ref={containerRef}
       className={cn(
         'relative flex flex-col',
-        isFullscreen ? 'h-dvh bg-paper' : 'min-h-[70dvh]',
+        // Fill the viewport (less the header and toolbar) so the control
+        // bar rests at the bottom of the screen rather than floating in
+        // the middle of a short page.
+        isFullscreen ? 'h-dvh bg-paper' : 'min-h-[calc(100svh-9rem)]',
       )}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -168,13 +171,14 @@ export function StoryReader({
       </div>
 
       {/* ---- The book --------------------------------------------- */}
-      <div className="relative flex flex-1 items-center justify-center px-2 py-4 sm:px-6 sm:py-8">
+      <div className="flex flex-1 items-center justify-center px-2 py-4 sm:px-6 sm:py-8">
+        <div className="relative mx-auto flex w-full max-w-6xl items-center justify-center">
         <button
           type="button"
           onClick={goPrevious}
           disabled={index === 0}
           aria-label={strings.previous}
-          className="absolute left-1 z-20 hidden size-11 items-center justify-center rounded-pill bg-paper-raised/90 text-ink-soft shadow-page backdrop-blur transition-all hover:text-amber-deep disabled:opacity-0 sm:flex lg:left-4"
+          className="absolute left-0 z-20 hidden size-11 items-center justify-center rounded-pill bg-paper-raised/90 text-ink-soft shadow-page backdrop-blur transition-all hover:text-amber-deep disabled:opacity-0 sm:flex"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -182,7 +186,7 @@ export function StoryReader({
         <div
           key={index}
           className={cn(
-            'w-full max-w-5xl [perspective:2000px]',
+            'w-full max-w-5xl px-0 sm:px-14 [perspective:2000px]',
             direction === 'forward' ? 'animate-turn-next' : 'animate-turn-back',
           )}
         >
@@ -206,10 +210,11 @@ export function StoryReader({
           onClick={goNext}
           disabled={index === totalSpreads - 1}
           aria-label={strings.next}
-          className="absolute right-1 z-20 hidden size-11 items-center justify-center rounded-pill bg-paper-raised/90 text-ink-soft shadow-page backdrop-blur transition-all hover:text-amber-deep disabled:opacity-0 sm:flex lg:right-4"
+          className="absolute right-0 z-20 hidden size-11 items-center justify-center rounded-pill bg-paper-raised/90 text-ink-soft shadow-page backdrop-blur transition-all hover:text-amber-deep disabled:opacity-0 sm:flex"
         >
           <ChevronRight className="size-5" />
         </button>
+        </div>
       </div>
 
       {/* ---- Controls ---------------------------------------------- */}
