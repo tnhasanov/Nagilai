@@ -148,7 +148,7 @@ function workerId(request: NextRequest, source: string | undefined): string {
  * off unless explicitly enabled, because a secret in a URL is a secret in
  * an access log.
  */
-export function authorise(request: NextRequest): NextResponse | null {
+function authorise(request: NextRequest): NextResponse | null {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     // Refuse rather than run unauthenticated: this endpoint spends money.

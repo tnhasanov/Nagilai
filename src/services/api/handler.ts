@@ -41,13 +41,24 @@ export interface ApiContext<Params = Record<string, string>> {
 
 type Handler<Params, Result> = (context: ApiContext<Params>) => Promise<Result>;
 
-/** Wraps an authenticated handler. */
+/**
+ * Wraps an authenticated handler.
+ *
+ * The context argument is deliberately **required**, not optional. Next
+ * always passes it to a route handler (`params` is a promise of `{}` on
+ * routes with no dynamic segments), and Next's generated route-type
+ * checks — which the webpack build path enforces strictly — reject a
+ * handler whose second parameter admits `undefined`. Declaring it
+ * optional cost nothing under Turbopack and made the webpack escape
+ * hatch unbuildable. The `?.` inside stays, so a unit test may still
+ * call the handler with one argument.
+ */
 export function authenticated<Params extends Record<string, string>, Result>(
   handler: Handler<Params, Result>,
 ) {
   return async (
     request: Request,
-    segment?: { params: Promise<Params> },
+    segment: { params: Promise<Params> },
   ): Promise<NextResponse> => {
     try {
       const actor = await authenticate(request);
@@ -65,7 +76,7 @@ export function authenticated<Params extends Record<string, string>, Result>(
 export function open<Params extends Record<string, string>, Result>(
   handler: (context: { request: Request; params: Params }) => Promise<Result>,
 ) {
-  return async (request: Request, segment?: { params: Promise<Params> }): Promise<NextResponse> => {
+  return async (request: Request, segment: { params: Promise<Params> }): Promise<NextResponse> => {
     try {
       const params = ((await segment?.params) ?? {}) as Params;
       return json(await handler({ request, params }));
