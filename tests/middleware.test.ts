@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { config } from '@/proxy';
+import { config } from '@/middleware';
 import { AUTH_PREFIXES, PRIVATE_PREFIXES } from '@/services/supabase/session';
 
 /**
- * The proxy matcher and the prefixes it acts on must not drift apart.
+ * The middleware matcher and the prefixes it acts on must not drift apart.
  *
  * Next.js requires `config.matcher` to be a static literal, so it cannot
  * be built from the same arrays the handler uses. That leaves two lists
@@ -23,7 +23,7 @@ function prefixOf(entry: string): string {
   return entry.replace(/\/:path\*$/, '');
 }
 
-describe('proxy matcher', () => {
+describe('middleware matcher', () => {
   it('covers every private prefix', () => {
     const covered = new Set(matcher.map(prefixOf));
     for (const prefix of PRIVATE_PREFIXES) {
@@ -55,9 +55,9 @@ describe('proxy matcher', () => {
 
   it('is not a catch-all', () => {
     // The shape that took the whole site down: one regex swallowing every
-    // path, so a proxy the platform could not wire up 404'd the lot.
+    // path, so a file the platform could not wire up 404'd the lot.
     const catchAll = matcher.filter((entry) => entry.includes('(?!') || entry === '/:path*');
-    expect(catchAll, 'a catch-all makes the proxy a single point of failure').toEqual([]);
+    expect(catchAll, 'a catch-all makes the middleware a single point of failure').toEqual([]);
   });
 
   it('leaves the marketing pages and the API alone', () => {

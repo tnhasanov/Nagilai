@@ -2,7 +2,18 @@ import type { NextRequest } from 'next/server';
 import { updateSession } from '@/services/supabase/session';
 
 /**
- * Next.js 16 renamed middleware to "proxy". Same thing, same place.
+ * Session refresh and auth redirects, in front of the private pages.
+ *
+ * **Deliberately named `middleware.ts`, not `proxy.ts`.** Next.js 16
+ * renamed this convention to "proxy", and this repository briefly
+ * followed the rename — which took the whole deployment down. The build
+ * succeeded, the route table listed `ƒ Proxy (Middleware)`, and every
+ * matched path then returned Vercel's platform `NOT_FOUND`: the hosting
+ * builder predates the rename, so its router pointed matched requests at
+ * a function it never registered. The old filename is still supported by
+ * Next 16 and understood by every deployment platform, which for a file
+ * that runs in front of pages is worth more than being current. Revisit
+ * only when the deploy target's tooling demonstrably understands `proxy`.
  *
  * The matcher below is deliberately a short list of the paths this
  * actually acts on, rather than "everything except static assets".
@@ -16,21 +27,20 @@ import { updateSession } from '@/services/supabase/session';
  *     nobody is signed in and nothing uses the result.
  *
  *  2. **A catch-all matcher makes this file a single point of failure for
- *     the entire site.** If the platform cannot wire the proxy into its
- *     routing output — which is a live risk while hosts catch up with the
- *     rename — then every matched path fails. With a catch-all, that is
+ *     the entire site.** If the platform cannot wire the file into its
+ *     routing output, every matched path fails. With a catch-all, that is
  *     every page. With this list, the marketing site and the API stay up
  *     regardless.
  *
- * Safe to narrow because this is not the security boundary and never was:
- * every private page calls `getCurrentUser()` and redirects on its own,
- * and Row Level Security refuses the data underneath either way. The
- * proxy exists to make the redirect fast, not to make it correct.
+ * Safe to keep narrow because this is not the security boundary and never
+ * was: every private page calls `getCurrentUser()` and redirects on its
+ * own, and Row Level Security refuses the data underneath either way.
+ * This file exists to make the redirect fast, not to make it correct.
  *
- * `tests/proxy.test.ts` fails if a prefix is added to the handler without
- * being added here.
+ * `tests/middleware.test.ts` fails if a prefix is added to the handler
+ * without being added here.
  */
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   return updateSession(request);
 }
 

@@ -11,7 +11,7 @@ import type { Database } from '@/types/database';
  * cannot read another family's data.
  */
 /**
- * Exported so `tests/proxy.test.ts` can check that `src/proxy.ts`'s
+ * Exported so `tests/middleware.test.ts` can check that `src/middleware.ts`'s
  * matcher covers every one of them. Next requires that matcher to be a
  * static literal, so the two lists cannot be derived from each other — and
  * a prefix added here but forgotten there is a redirect that silently
