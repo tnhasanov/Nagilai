@@ -11,6 +11,26 @@ assuming success.
 
 Nothing was deleted or rewritten to produce this document.
 
+### Resolved since the audit ran (commit `f412845`)
+
+The audit itself is unchanged below; these items were fixed immediately
+afterwards and are marked **fixed** where they appear.
+
+- Story creation now pre-checks the **whole** book's credit cost, so a
+  parent can no longer start a story that dies partway through. The credit
+  *values* remain yours to set.
+- The TWA and the native app no longer share a package name.
+- CI added: types, lint, tests, build, migrations + SQL assertions, and the
+  Metro bundle — none of it needing a credential.
+- `npm run check:env` added: validates a real environment, and with
+  `--probe` confirms each service answers, without printing a value.
+- `docs/LAUNCH-READINESS.md` added.
+- Three broken or stale npm scripts fixed (`db:migrate` pointed at a
+  non-existent file, `lint` used the removed `next lint`, the type
+  generator had no entry).
+- `docs/MOBILE.md` reordered to native-first; `docs/ROUTES.md` now covers
+  `/api/v1`; `.env.example` documents `DATABASE_URL`.
+
 ---
 
 ## 0. What was actually run
@@ -118,7 +138,9 @@ Real work, deliberately unfinished, not blocked by anyone else.
   declares a `* * * * *` worker cron, which needs a paid Vercel plan — the
   Hobby tier restricts cron frequency. Confirm against Vercel's current plan
   limits when the project is created.
-- **No CI.** No `.github/` directory. Nothing runs the tests on push.
+- **No CI.** ~~No `.github/` directory.~~ **Fixed** — `.github/workflows/ci.yml`
+  runs types, lint, tests, build, the migrations with their SQL assertions,
+  and the Metro bundle. Unproven until it runs on GitHub for the first time.
 - **Mobile is English-only.** The four locale dictionaries exist on the web;
   the native app hardcodes English strings and only forwards a `locale` to the
   catalogue endpoint. Azerbaijani is the primary market.
@@ -137,14 +159,16 @@ Real work, deliberately unfinished, not blocked by anyone else.
 - **No story-quality evaluation.** Nothing checks that generated stories are
   age-appropriate, in the right language, or actually good. For a children's
   product this is the highest-value missing test.
-- **`docs/MOBILE.md` leads with the Trusted Web Activity** as the Android
-  route. That contradicts the current native-first direction and should be
-  re-ordered so the native app is the primary path and the TWA is documented
-  as a web capability only.
-- **`docs/ROUTES.md` predates the mobile API** and documents none of the 13
-  `/api/v1` endpoints.
-- **`.env.example` omits `DATABASE_URL`**, which `scripts/generate-db-types.mjs`
-  and `scripts/verify-migrations.sh` both require.
+- ~~**`docs/MOBILE.md` leads with the Trusted Web Activity.**~~ **Fixed** —
+  reordered so the native app is the primary path and the TWA is an optional
+  extra at the end.
+- ~~**`docs/ROUTES.md` predates the mobile API.**~~ **Fixed** — all 13
+  `/api/v1` endpoints are documented, with the bearer-token and CORS
+  reasoning.
+- ~~**`.env.example` omits `DATABASE_URL`.**~~ **Fixed.**
+- **Three npm scripts were broken or stale** — `db:migrate` pointed at a file
+  that does not exist, `lint` used the `next lint` command Next 16 removed,
+  and the type generator had no entry. **Fixed**, and `check` now runs lint.
 
 ---
 
@@ -161,7 +185,7 @@ Present so the shape is right, but not real.
 | Print provider | `PRINT_PROVIDER=manual`; orders land in an admin queue | No printer has been chosen; no real costs or SLAs are claimed anywhere |
 | `products` seed | 7 rows with placeholder prices | Prices are the owner's decision, not an assumption to make |
 | Legal pages | `/privacy` and `/terms` are drafts written from the architecture | Not reviewed by anyone qualified |
-| `ANDROID_PACKAGE_NAME` example | `com.nagilai.app` — **the same package the native app claims** | A collision: whichever is uploaded to Play first permanently owns the name |
+| `ANDROID_PACKAGE_NAME` example | ~~`com.nagilai.app`~~ → `com.nagilai.twa` | **Fixed** — the collision would have let the wrapper permanently claim the native app's identity |
 
 ---
 
@@ -218,7 +242,8 @@ Ordered by *what blocks the next real step*, not by size.
 measurement, no beta, no store submission, no asset-links verification. Every
 other checkpoint depends on this one. *Needs: credentials 1–6.*
 
-**2. The default credit economics are internally inconsistent.**
+**2. The default credit economics are internally inconsistent.** *(symptom
+fixed; the values are still yours)*
 `story_illustration` is charged **per image**, and a story generates one image
 per page **plus** a cover. With the seeded defaults a "medium" story is
 10 pages → 11 images → **1 + 11 = 12 credits**, while `signup_grant` is **3**.
@@ -232,17 +257,21 @@ $0.042/image, so those 11 images cost roughly **$0.46 per story** before text
 or narration. This is the material cost issue you asked to be flagged.
 
 Two separable fixes:
-- *Mine, no pricing implication:* pre-check the **full** estimated credit cost
-  before creating the story, so a parent is told up front instead of receiving
-  a half-generated book. I will do this in Checkpoint 1.
-- *Yours:* the actual `signup_grant`, per-image cost, and default image count.
-  I will not change these without your approval.
+- *Mine, no pricing implication:* **done.** Story creation now pre-checks the
+  full estimated cost (`estimateStoryCost`, covered by four tests), so a
+  parent is refused up front instead of receiving a half-generated book.
+- *Yours, still open:* the actual `signup_grant`, per-image cost, and default
+  image count. With today's values a new parent still cannot afford their
+  first illustrated story — they will now be told so cleanly rather than
+  discovering it through failed jobs, but the free tier does not work until
+  you set these. See `docs/LAUNCH-READINESS.md`.
 
-**3. Package-name collision between the TWA and the native app.** Both claim
-`com.nagilai.app`. Play permanently binds a package name on first upload, so
-publishing the TWA under it would block the native app forever. Given the
-native-first direction, the native app should keep `com.nagilai.app` and the
-TWA example should be changed. *Cheap to fix; must happen before any upload.*
+**3. Package-name collision between the TWA and the native app.** **Fixed.**
+Both claimed `com.nagilai.app`; Play binds a package name permanently on first
+upload, so publishing the TWA under it would have blocked the native app
+forever. The native app keeps the name, the TWA example is now
+`com.nagilai.twa`, and `npm run check:env` fails if the collision is
+reintroduced. Nothing has been uploaded to Play, so this was caught in time.
 
 ### P1 — blocks a trustworthy beta
 
@@ -261,8 +290,10 @@ children's product does not exist: are the stories age-appropriate, actually
 in the requested language, free of the banned phrasings, and good? Needs a
 small graded corpus run against live generation.
 
-**7. No CI.** Tests and migrations should run on every push before any of this
-is exposed to real families.
+**7. No CI.** **Fixed** — `.github/workflows/ci.yml` runs types, lint, tests,
+build, the migrations with their SQL assertions, and the Metro bundle, none of
+it needing a credential. It has not yet run on GitHub, so treat it as
+implemented-but-not-live-tested until the first green run.
 
 ### P2 — native completeness before store submission
 
@@ -278,11 +309,11 @@ progress, matching the web.
 
 ### P3 — documentation and hygiene
 
-**13.** Re-order `docs/MOBILE.md` so native is the primary path.
-**14.** Document the 13 `/api/v1` endpoints in `docs/ROUTES.md`.
-**15.** Add `DATABASE_URL` to `.env.example`.
+**13.** ~~Re-order `docs/MOBILE.md`~~ — **done**.
+**14.** ~~Document `/api/v1` in `docs/ROUTES.md`~~ — **done**.
+**15.** ~~Add `DATABASE_URL` to `.env.example`~~ — **done**.
 **16.** Decide the Vercel plan, or change the worker cron to a schedule the
-Hobby plan allows.
+Hobby plan allows. *Still open — it depends on the plan you buy.*
 
 ### P4 — gated on your decisions
 
