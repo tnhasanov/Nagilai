@@ -280,6 +280,59 @@ export interface Database {
           { foreignKeyName: 'credit_transactions_story_id_fkey'; columns: ['story_id']; isOneToOne: false; referencedRelation: 'stories'; referencedColumns: ['id'] },
         ];
       };
+      device_push_tokens: {
+        Row: {
+          id: string;
+          owner_id: string;
+          token: string;
+          provider: string;
+          platform: string;
+          device_id: string | null;
+          device_name: string | null;
+          app_version: string | null;
+          locale: string;
+          disabled_at: string | null;
+          disabled_reason: string | null;
+          last_seen_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          token: string;
+          provider?: string;
+          platform: string;
+          device_id?: string | null;
+          device_name?: string | null;
+          app_version?: string | null;
+          locale?: string;
+          disabled_at?: string | null;
+          disabled_reason?: string | null;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          token?: string;
+          provider?: string;
+          platform?: string;
+          device_id?: string | null;
+          device_name?: string | null;
+          app_version?: string | null;
+          locale?: string;
+          disabled_at?: string | null;
+          disabled_reason?: string | null;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: 'device_push_tokens_owner_id_fkey'; columns: ['owner_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ];
+      };
       educational_objectives: {
         Row: {
           id: string;
@@ -624,6 +677,45 @@ export interface Database {
           { foreignKeyName: 'narrations_story_id_fkey'; columns: ['story_id']; isOneToOne: false; referencedRelation: 'stories'; referencedColumns: ['id'] },
           { foreignKeyName: 'narrations_version_id_fkey'; columns: ['version_id']; isOneToOne: false; referencedRelation: 'story_versions'; referencedColumns: ['id'] },
           { foreignKeyName: 'narrations_voice_id_fkey'; columns: ['voice_id']; isOneToOne: false; referencedRelation: 'voices'; referencedColumns: ['id'] },
+        ];
+      };
+      notification_deliveries: {
+        Row: {
+          id: string;
+          owner_id: string;
+          story_id: string | null;
+          kind: string;
+          dedupe_key: string;
+          status: string;
+          detail: Json;
+          device_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          story_id?: string | null;
+          kind: string;
+          dedupe_key: string;
+          status?: string;
+          detail?: Json;
+          device_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          story_id?: string | null;
+          kind?: string;
+          dedupe_key?: string;
+          status?: string;
+          detail?: Json;
+          device_count?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: 'notification_deliveries_owner_id_fkey'; columns: ['owner_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+          { foreignKeyName: 'notification_deliveries_story_id_fkey'; columns: ['story_id']; isOneToOne: false; referencedRelation: 'stories'; referencedColumns: ['id'] },
         ];
       };
       order_items: {
@@ -1009,6 +1101,10 @@ export interface Database {
           last_seen_at: string | null;
           created_at: string;
           updated_at: string;
+          push_enabled: boolean;
+          push_story_ready: boolean;
+          push_quiet_from_minute: number | null;
+          push_quiet_to_minute: number | null;
         };
         Insert: {
           id: string;
@@ -1027,6 +1123,10 @@ export interface Database {
           last_seen_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          push_enabled?: boolean;
+          push_story_ready?: boolean;
+          push_quiet_from_minute?: number | null;
+          push_quiet_to_minute?: number | null;
         };
         Update: {
           id?: string;
@@ -1045,6 +1145,10 @@ export interface Database {
           last_seen_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          push_enabled?: boolean;
+          push_story_ready?: boolean;
+          push_quiet_from_minute?: number | null;
+          push_quiet_to_minute?: number | null;
         };
         Relationships: [
           { foreignKeyName: 'profiles_id_fkey'; columns: ['id']; isOneToOne: true; referencedRelation: 'users'; referencedColumns: ['id'] },

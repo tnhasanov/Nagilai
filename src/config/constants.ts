@@ -59,6 +59,30 @@ export const HARD_LIMITS = {
   maxJobAttempts: 3,
 } as const;
 
+/**
+ * Worker defaults (§27).
+ *
+ * Deliberately *defaults*, not constants the worker reads directly: the
+ * route passes explicit values sized to whatever host it runs on. Vercel
+ * caps a function at 60 seconds, a container has no such limit, and a
+ * `pg_cron` trigger calling through `pg_net` has its own timeout. The
+ * queue behaves the same under all of them.
+ */
+export const WORKER_DEFAULTS = {
+  /** Jobs one invocation will claim before handing back. */
+  maxJobs: 12,
+  /** Wall-clock budget, below the host's function timeout. */
+  timeBudgetMs: 45_000,
+  /** Jobs run concurrently inside one claim. */
+  batchSize: 3,
+  /**
+   * How many times a run may wake its own successor before waiting for
+   * the next scheduler tick. Bounds the chain so a pathological queue
+   * cannot invoke the worker forever; the work is durable either way.
+   */
+  maxContinuations: 20,
+} as const;
+
 /** Product analytics event names (§19). */
 export const ANALYTICS_EVENTS = {
   signupCompleted: 'signup_completed',

@@ -7,7 +7,8 @@ import { errors } from '@/lib/errors';
 import { attempt, type ActionResult } from '@/lib/result';
 import { getCurrentUser, supabaseServer } from '@/services/supabase/server';
 import { supabaseAdmin } from '@/services/supabase/admin';
-import { DEFAULT_UI_LOCALE, isUiLocale, LOCALE_COOKIE, UI_LOCALES } from '@/config/constants';
+import { DEFAULT_UI_LOCALE, isUiLocale, LOCALE_COOKIE } from '@/config/constants';
+import { profileInputSchema, updateProfile } from './operations';
 
 /**
  * Account management (§22).
@@ -16,30 +17,21 @@ import { DEFAULT_UI_LOCALE, isUiLocale, LOCALE_COOKIE, UI_LOCALES } from '@/conf
  * must be able to do on request: export everything, and delete everything.
  */
 
-const profileSchema = z.object({
-  displayName: z.string().trim().max(80).optional().or(z.literal('')),
-  uiLocale: z.enum(UI_LOCALES).default(DEFAULT_UI_LOCALE),
-  marketingOptIn: z.boolean().default(false),
-});
-
+/**
+ * Thin wrapper over the shared operation.
+ *
+ * The only thing the web adds is the locale cookie, which is how a signed
+ * *out* visitor keeps their language and is meaningless on a phone. The
+ * database write itself lives in `operations.ts` so the native app's
+ * `PATCH /api/v1/me` cannot drift away from it.
+ */
 export async function updateProfileAction(input: unknown): Promise<ActionResult<{ updated: boolean }>> {
   return attempt(async () => {
     const user = await getCurrentUser();
     if (!user) throw errors.unauthenticated();
 
-    const parsed = profileSchema.parse(input);
-    const supabase = await supabaseServer();
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        display_name: parsed.displayName || null,
-        ui_locale: parsed.uiLocale,
-        marketing_opt_in: parsed.marketingOptIn,
-      })
-      .eq('id', user.id);
-
-    if (error) throw errors.validation('We could not save your settings.');
+    const parsed = profileInputSchema.parse(input);
+    const result = await updateProfile(user.id, parsed, await supabaseServer());
 
     const cookieStore = await cookies();
     cookieStore.set(LOCALE_COOKIE, parsed.uiLocale, {
@@ -49,7 +41,7 @@ export async function updateProfileAction(input: unknown): Promise<ActionResult<
     });
 
     revalidatePath('/settings');
-    return { updated: true };
+    return { updated: result.updated };
   });
 }
 

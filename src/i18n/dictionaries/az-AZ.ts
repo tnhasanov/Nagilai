@@ -312,4 +312,13 @@ export const azAZ: Dictionary = {
     byTheme: 'Mövzuya görə',
     noData: 'Hələ məlumat yoxdur.',
   },
+  notifications: {
+    storyReadyTitle: 'Nağılınız hazırdır',
+    storyReadyBody: '{title} tamamlandı və oxunmağı gözləyir.',
+    storyReadyBodyNamed: '{title} {child} üçün hazırdır.',
+    storyFailedTitle: 'Bir nağıl diqqətinizi gözləyir',
+    storyFailedBody: '{title} tamamlana bilmədi. Yenidən cəhd etmək üçün açın.',
+    channelStories: 'Hazır nağıllar',
+    channelStoriesDescription: 'Kitab hazır olanda sizə xəbər verir.',
+  },
 };

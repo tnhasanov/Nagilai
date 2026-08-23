@@ -312,4 +312,13 @@ export const ruRU: Dictionary = {
     byTheme: 'По темам',
     noData: 'Пока пусто.',
   },
+  notifications: {
+    storyReadyTitle: 'Ваша сказка готова',
+    storyReadyBody: '«{title}» готова и ждёт чтения.',
+    storyReadyBodyNamed: '«{title}» готова для {child}.',
+    storyFailedTitle: 'Сказке нужно ваше внимание',
+    storyFailedBody: 'Не удалось закончить «{title}». Откройте, чтобы попробовать снова.',
+    channelStories: 'Готовые сказки',
+    channelStoriesDescription: 'Сообщает, когда книга готова.',
+  },
 };

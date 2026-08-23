@@ -311,6 +311,15 @@ export const enUS = {
     byTheme: 'By theme',
     noData: 'Nothing yet.',
   },
+  notifications: {
+    storyReadyTitle: 'Your story is ready',
+    storyReadyBody: '{title} is finished and waiting to be read.',
+    storyReadyBodyNamed: '{title} is ready for {child}.',
+    storyFailedTitle: 'A story needs your attention',
+    storyFailedBody: 'We could not finish {title}. Open it to try again.',
+    channelStories: 'Finished stories',
+    channelStoriesDescription: 'Tells you when a book has finished generating.',
+  },
 } as const;
 
 /**

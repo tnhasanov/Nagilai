@@ -88,6 +88,12 @@ const featuresSchema = z.object({
   payments_enabled: z.boolean().default(false),
   printing_enabled: z.boolean().default(false),
   guest_preview_enabled: z.boolean().default(true),
+  /**
+   * Off until a real Expo project id and store push credentials exist.
+   * The native app asks the server before prompting, so a parent is never
+   * asked for a permission the product cannot yet honour.
+   */
+  push_notifications_enabled: z.boolean().default(false),
 });
 
 const planLimitEntrySchema = z.object({

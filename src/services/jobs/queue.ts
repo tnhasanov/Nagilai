@@ -103,6 +103,41 @@ export async function claim(limit: number, workerId: string, types?: JobType[]):
   return (data ?? []) as GenerationJob[];
 }
 
+/**
+ * How much work is waiting right now.
+ *
+ * The worker uses this to decide whether to wake itself again rather than
+ * waiting for the next scheduler tick. That is what makes the scheduler's
+ * *cadence* irrelevant: whether a tick arrives every minute or once a day,
+ * a queue with work in it drains continuously once something starts it.
+ *
+ * `head` counts only jobs that are due now -- a job backing off after a
+ * failure is pending but not runnable, and chaining the worker for it
+ * would spin.
+ */
+export async function pending(): Promise<{ total: number; due: number }> {
+  const admin = supabaseAdmin();
+  const nowIso = new Date().toISOString();
+
+  const [total, due] = await Promise.all([
+    admin.from('generation_jobs').select('id', { count: 'exact', head: true }).eq('status', 'queued'),
+    admin
+      .from('generation_jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'queued')
+      .lte('run_after', nowIso),
+  ]);
+
+  if (total.error || due.error) {
+    log.error('could not count pending jobs', {
+      error: (total.error ?? due.error)?.message ?? 'unknown',
+    });
+    return { total: 0, due: 0 };
+  }
+
+  return { total: total.count ?? 0, due: due.count ?? 0 };
+}
+
 export async function complete(jobId: string, result?: Record<string, unknown>): Promise<void> {
   const { error } = await supabaseAdmin()
     .from('generation_jobs')

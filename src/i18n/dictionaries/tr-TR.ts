@@ -312,4 +312,13 @@ export const trTR: Dictionary = {
     byTheme: 'Temaya göre',
     noData: 'Henüz veri yok.',
   },
+  notifications: {
+    storyReadyTitle: 'Masalınız hazır',
+    storyReadyBody: '{title} tamamlandı ve okunmayı bekliyor.',
+    storyReadyBodyNamed: '{title}, {child} için hazır.',
+    storyFailedTitle: 'Bir masal ilginizi bekliyor',
+    storyFailedBody: '{title} tamamlanamadı. Yeniden denemek için açın.',
+    channelStories: 'Biten masallar',
+    channelStoriesDescription: 'Bir kitap hazır olduğunda haber verir.',
+  },
 };
