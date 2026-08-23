@@ -230,7 +230,8 @@ Catalogued in `docs/DECISIONS.md` Part 1, and **not** being guessed at.
 6. **Verified AI rate card** — the current numbers are estimates.
 7. **Illustration cost and default image count** — the largest lever on unit
    economics. At the seeded rate, a medium story is roughly $0.46 of images.
-8. **Data residency** — which Supabase region, chosen before real users.
+8. ~~**Data residency**~~ — **decided**: Frankfurt (`eu-central-1`). Vercel
+   functions must be created in the same region.
 9. **Store submission** — nothing will be submitted without your approval.
 
 ---

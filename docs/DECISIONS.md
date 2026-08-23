@@ -126,10 +126,25 @@ without a deployment.
 to a smaller model. Story quality is the product; this is where the trade-off
 is most visible to a customer.
 
-## 1.10 Data residency — **decide before real users**
+## 1.10 Data residency — **decided: Frankfurt (`eu-central-1`)**
 
-The Supabase region is chosen when the project is created and is painful to
-change afterwards. Choose it with §1.5 in mind.
+The Supabase project lives in Central EU (Frankfurt). Chosen when the
+project was created, and the right answer on both counts:
+
+- **Latency.** Roughly 3,000 km from Baku, so ~60-80 ms round trip. Every
+  signed-in page makes several database round trips, and a Singapore or
+  Tokyo region would have tripled that.
+- **It keeps §1.5 open.** Hosting Azerbaijani children's data inside the
+  EU means that choosing GDPR alignment later requires no migration and no
+  international-transfer story. The reverse — deciding on GDPR after
+  storing the data elsewhere — is the expensive order to do it in.
+
+The Vercel functions must be created in the same region. A function in the
+US talking to a database in Frankfurt pays the distance on every one of
+those round trips, which is the failure mode this choice exists to avoid.
+
+Still open under §1.5: which regime actually governs the data. Frankfurt
+makes that a decision rather than a constraint.
 
 ---
 
