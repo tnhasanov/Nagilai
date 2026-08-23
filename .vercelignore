@@ -1,13 +1,13 @@
 # The native app is not part of the website's deployment.
 #
-# Vercel would otherwise upload it and, because it carries its own
-# package.json, risk being treated as a monorepo workspace. Excluding it
-# keeps the build to what actually serves the site.
-mobile/
-
-# Nothing here runs on Vercel.
-supabase/
-docs/
-tests/
-scripts/
-.github/
+# The leading slash is load-bearing. Without it, a pattern matches a
+# directory of that name at ANY depth -- which is how an earlier version
+# of this file, listing `supabase/`, silently deleted
+# `src/services/supabase/` from the deployment and broke the build with 48
+# unresolved imports. `tests/vercelignore.test.ts` now fails if any
+# pattern here can shadow something under `src/`.
+#
+# Nothing else is excluded. Docs, migrations and tests are small, the
+# build ignores them anyway, and every extra pattern is another chance to
+# shadow a path that matters.
+/mobile/

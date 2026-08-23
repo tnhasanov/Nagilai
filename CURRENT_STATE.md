@@ -1,7 +1,7 @@
 # Current state
 
-**Last verified:** 2026-08-23 · **Branch:** `claude/old-website-reference-0rjnyp`
-**`main`:** still at the initial commit — nothing here has been merged.
+**Last verified:** 2026-08-23 · **Branch:** `main`
+The build is merged to `main` and Vercel deploys from it.
 
 Every claim below was checked by running something, not by remembering.
 Where a thing cannot be verified without a credential or a live service, it
@@ -23,7 +23,7 @@ build that is real rather than proven-in-a-harness.
 | --- | --- | --- |
 | Web types | `npm run typecheck` | **exit 0** |
 | Web lint | `npm run lint` | **exit 0** |
-| Web tests | `npm test` | **171 passed**, 11 files |
+| Web tests | `npm test` | **178 passed**, 12 files |
 | Web build | `npm run build` | **succeeds**, 48 routes |
 | Database | 10 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
 | Database assertions | `npm run db:verify` | **"database assertions passed"** |
@@ -129,7 +129,7 @@ imported in five server-only modules. No secret is in the repository.
 `npm run check:env` validates a real environment, and with `--probe` calls
 each service once, without printing a value.
 
-**CI.** Three jobs: web (types, lint, 171 tests, build), database (ten
+**CI.** Three jobs: web (types, lint, 178 tests, build), database (ten
 migrations, an idempotent replay, and the RLS/credit/job-queue assertions
 against a stock `postgres:16` container), and mobile (types, 20 tests, the
 Metro bundle). None of it needs a credential.
