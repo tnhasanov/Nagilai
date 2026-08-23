@@ -82,6 +82,27 @@ handed back deliberately.
 
 ---
 
+## Where the functions run
+
+`vercel.json` pins them to Frankfurt:
+
+```json
+{ "regions": ["fra1"] }
+```
+
+Declared in the repository rather than clicked in a dashboard, because it
+is a fact about the system and belongs next to the code. It must match the
+Supabase region: a function in Washington talking to a database in
+Frankfurt pays roughly 90ms each way, on every one of the several round
+trips a signed-in page makes.
+
+The deployment log prints the region it actually used. Check it after the
+first deploy — if it still says `iad1`, the plan is not honouring this
+setting and the choice becomes whether to pay for a plan that does or to
+move the database instead.
+
+---
+
 ## Option 1 — Vercel Cron
 
 Configured in `vercel.json`, and deliberately set to **once a day**:
