@@ -37,6 +37,10 @@ const securityHeaders = [
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
+      // The installable app: the service worker and the manifest are both
+      // same-origin, and nothing else may register a worker.
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
       "frame-ancestors 'none'",
       "form-action 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
@@ -70,6 +74,20 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: securityHeaders,
+      },
+      {
+        // The worker decides what everything else caches, so it must never
+        // be served stale itself.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
+        // Content-addressed by name; safe to keep forever.
+        source: '/icons/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
     ];
   },

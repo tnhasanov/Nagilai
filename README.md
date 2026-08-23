@@ -38,6 +38,7 @@ feature flag. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 | [Routes](docs/ROUTES.md) | Every page and endpoint, and who may reach it |
 | [Security & privacy](docs/SECURITY-PRIVACY.md) | Children's data, threat model, what is enforced where |
 | [Setup](docs/SETUP.md) | Supabase, OpenAI, Vercel, storage, local development |
+| [Mobile & app stores](docs/MOBILE.md) | Hosting, the Play Store package, and what iOS actually needs |
 | [Roadmap](docs/ROADMAP.md) | Phase 1–4 and what is deliberately deferred |
 | [Decisions](docs/DECISIONS.md) | Architectural decisions, assumptions made, **and the calls that need the owner** |
 | [Bubble migration](docs/BUBBLE-MIGRATION.md) | Mapping from the retired prototype |
@@ -98,6 +99,7 @@ DATABASE_URL=postgres:///nagilai_test ./scripts/verify-migrations.sh
 | Payments | Stripe abstraction (Phase 2) |
 | Printing | `PrintProvider` abstraction, manual fulfilment first (Phase 3) |
 | Hosting | Vercel |
+| Mobile | Installable PWA; Play Store via a Trusted Web Activity |
 
 ## Layout
 

@@ -11,7 +11,15 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
-    ignores: ['.next/**', 'node_modules/**', 'coverage/**', 'src/types/database.ts'],
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'coverage/**',
+      // Generated from the database schema.
+      'src/types/database.ts',
+      // Service worker: runs in a worker global scope, not the app's.
+      'public/sw.js',
+    ],
   },
   {
     rules: {

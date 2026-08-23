@@ -78,7 +78,7 @@ Nothing below requires a rewrite of what exists:
 
 | Ambition | What already supports it |
 | --- | --- |
-| Mobile app | All logic is server-side behind actions and endpoints |
+| Mobile app | Installable PWA today, Play-Store-packageable as a TWA (see [MOBILE.md](MOBILE.md)); iOS needs a native shell to clear Apple's guideline 4.2 |
 | Family accounts | `profiles` and ownership are already separable from `auth.users` |
 | Grandparents gifting | `orders` + `share_links` |
 | Birthday and recurring books | The job queue plus a scheduled trigger |

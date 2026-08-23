@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Literata, Nunito } from 'next/font/google';
 import { Toaster } from 'sonner';
+import { ProgressiveWebApp } from '@/components/site/pwa';
 import { resolveLocale } from '@/i18n/server';
 import { siteUrl } from '@/config/env';
 import './globals.css';
@@ -48,10 +49,25 @@ export const metadata: Metadata = {
     title: 'Nagilai — personalised storybooks for your child',
     description: 'Your child. Their imagination. Their own story.',
     url: siteUrl(),
+    images: [{ url: '/icons/og.png', width: 1200, height: 630, alt: 'Nagilai' }],
   },
-  twitter: { card: 'summary_large_image' },
-  icons: { icon: '/icon.svg' },
+  twitter: { card: 'summary_large_image', images: ['/icons/og.png'] },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  // iOS ignores the web app manifest and reads these instead, so an
+  // install from Safari still opens full screen with the right name.
+  appleWebApp: {
+    capable: true,
+    title: 'Nagilai',
+    statusBarStyle: 'default',
+  },
   robots: { index: true, follow: true },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -69,8 +85,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang={locale} className={`${literata.variable} ${nunito.variable}`} suppressHydrationWarning>
+      <head>
+        {/*
+          Next emits the standardised `mobile-web-app-capable`, which iOS
+          16.4+ honours. Older iPhones still read the vendor-prefixed name,
+          and without it an install from Safari opens with browser chrome.
+        */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+      </head>
       <body className="grain relative antialiased">
         {children}
+        <ProgressiveWebApp />
         <Toaster
           position="bottom-center"
           toastOptions={{
