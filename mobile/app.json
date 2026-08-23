@@ -7,20 +7,24 @@
     "scheme": "nagilai",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "primaryColor": "#D97E28",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#FDFAF4"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nagilai.app",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "config": { "usesNonExemptEncryption": false },
       "infoPlist": {
         "UIBackgroundModes": ["audio"],
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -31,7 +35,19 @@
         "backgroundColor": "#2B2119"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["INTERNET"]
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -42,10 +58,24 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
+      "expo-localization",
+      "expo-apple-authentication",
       [
         "expo-audio",
         {
-          "microphonePermission": false
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": true,
+          "enableBackgroundRecording": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#D97E28",
+          "defaultChannel": "stories",
+          "enableBackgroundRemoteNotifications": false
         }
       ],
       [
@@ -53,7 +83,8 @@
         {
           "backgroundColor": "#FDFAF4",
           "image": "./assets/splash.png",
-          "imageWidth": 180
+          "imageWidth": 180,
+          "dark": { "backgroundColor": "#171310" }
         }
       ]
     ],

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession } from '../../src/session';
+import { useI18n } from '../../src/i18n';
 import type { Catalogue, ChildProfile } from '../../src/api';
 import { ApiError } from '../../src/api';
 import {
@@ -34,10 +35,17 @@ import {
  * narration language. The server resolves all of that from configuration
  * and from the story row.
  */
+const LENGTH_KEYS = {
+  short: 'create.lengthShort',
+  medium: 'create.lengthMedium',
+  long: 'create.lengthLong',
+} as const;
+
 export default function Create() {
   const { api, profile, refreshProfile } = useSession();
   const router = useRouter();
   const palette = usePalette();
+  const { t, locale } = useI18n();
 
   const [children, setChildren] = useState<ChildProfile[] | null>(null);
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null);
@@ -55,9 +63,12 @@ export default function Create() {
 
   const load = useCallback(async () => {
     try {
+      // The catalogue is labelled in the *interface* language, which is
+      // what the parent is reading right now. The story's own language is
+      // a separate choice below.
       const [{ children: list }, cat] = await Promise.all([
         api.children.list(),
-        api.catalogue(profile?.uiLocale ?? 'en-US'),
+        api.catalogue(locale),
       ]);
 
       setChildren(list);
@@ -73,10 +84,10 @@ export default function Create() {
       setThemeSlug((current) => current ?? cat.themes[0]?.slug ?? null);
       setStyleSlug((current) => current ?? cat.styles[0]?.slug ?? null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'We could not load the story options.');
+      setError(caught instanceof Error ? caught.message : t('create.loadFailed'));
       setChildren([]);
     }
-  }, [api, profile?.uiLocale]);
+  }, [api, locale, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,15 +100,15 @@ export default function Create() {
     [children, childId],
   );
 
-  if (children === null || catalogue === null) return <Loading label="Getting ready" />;
+  if (children === null || catalogue === null) return <Loading label={t('create.gettingReady')} />;
 
   if (children.length === 0) {
     return (
       <Screen>
         <EmptyState
-          title="Add a child profile first"
-          description="Every Nagilai story is built around a real child. It only takes a moment."
-          action={<Button label="Add a child" onPress={() => router.push('/child/new')} />}
+          title={t('create.needsChildTitle')}
+          description={t('create.needsChildDescription')}
+          action={<Button label={t('children.add')} onPress={() => router.push('/child/new')} />}
         />
       </Screen>
     );
@@ -126,11 +137,7 @@ export default function Create() {
       void refreshProfile();
       router.push(`/story/${storyId}`);
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : 'We could not start this story. Please try again.',
-      );
+      setError(caught instanceof ApiError ? caught.message : t('create.startFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -141,11 +148,15 @@ export default function Create() {
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xxl }}>
         {error ? <ErrorNotice message={error} /> : null}
 
-        <Stepper step={step} labels={['Who', 'What', 'Touches']} onSelect={setStep} />
+        <Stepper
+          step={step}
+          labels={[t('create.stepWho'), t('create.stepWhat'), t('create.stepTouches')]}
+          onSelect={setStep}
+        />
 
         {step === 0 ? (
           <View style={{ gap: spacing.md }}>
-            <Title>Who is it for?</Title>
+            <Title>{t('create.whoTitle')}</Title>
             {children.map((child) => (
               <Pressable
                 key={child.id}
@@ -181,14 +192,16 @@ export default function Create() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Heading>{child.nickname ?? child.name}</Heading>
-                    {child.ageYears !== null ? <Caption>{child.ageYears} years old</Caption> : null}
+                    {child.ageYears !== null ? (
+                      <Caption>{t('children.yearsOld', { count: child.ageYears })}</Caption>
+                    ) : null}
                   </View>
                 </Card>
               </Pressable>
             ))}
 
             <Button
-              label="Add another child"
+              label={t('children.addAnother')}
               variant="ghost"
               onPress={() => router.push('/child/new')}
             />
@@ -197,11 +210,11 @@ export default function Create() {
 
         {step === 1 ? (
           <View style={{ gap: spacing.lg }}>
-            <Title>What kind of story?</Title>
+            <Title>{t('create.whatTitle')}</Title>
 
             <View style={{ gap: spacing.sm }}>
-              <Text style={[type.label, { color: palette.ink }]}>Story language</Text>
-              <Caption>The whole book — text, narration and PDF — will be in this language.</Caption>
+              <Text style={[type.label, { color: palette.ink }]}>{t('create.storyLanguage')}</Text>
+              <Caption>{t('create.storyLanguageHint')}</Caption>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 {catalogue.languages.map((language) => (
                   <Chip
@@ -215,7 +228,7 @@ export default function Create() {
             </View>
 
             <View style={{ gap: spacing.sm }}>
-              <Text style={[type.label, { color: palette.ink }]}>Story type</Text>
+              <Text style={[type.label, { color: palette.ink }]}>{t('create.storyType')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 {catalogue.themes.map((theme) => (
                   <Chip
@@ -230,10 +243,10 @@ export default function Create() {
             </View>
 
             <View style={{ gap: spacing.sm }}>
-              <Text style={[type.label, { color: palette.ink }]}>Something to learn</Text>
+              <Text style={[type.label, { color: palette.ink }]}>{t('create.somethingToLearn')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 <Chip
-                  label="No particular lesson"
+                  label={t('create.noLesson')}
                   selected={objectiveSlug === null}
                   onPress={() => setObjectiveSlug(null)}
                 />
@@ -252,12 +265,16 @@ export default function Create() {
 
         {step === 2 ? (
           <View style={{ gap: spacing.lg }}>
-            <Title>A few last touches</Title>
+            <Title>{t('create.touchesTitle')}</Title>
 
             <View style={{ gap: spacing.sm }}>
-              <Text style={[type.label, { color: palette.ink }]}>Illustration style</Text>
+              <Text style={[type.label, { color: palette.ink }]}>{t('create.illustrationStyle')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-                <Chip label="No pictures" selected={styleSlug === null} onPress={() => setStyleSlug(null)} />
+                <Chip
+                  label={t('create.noPictures')}
+                  selected={styleSlug === null}
+                  onPress={() => setStyleSlug(null)}
+                />
                 {catalogue.styles.map((style) => (
                   <Chip
                     key={style.slug}
@@ -270,12 +287,14 @@ export default function Create() {
             </View>
 
             <View style={{ gap: spacing.sm }}>
-              <Text style={[type.label, { color: palette.ink }]}>Length</Text>
+              <Text style={[type.label, { color: palette.ink }]}>{t('create.length')}</Text>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 {(['short', 'medium', 'long'] as const).map((value) => (
                   <Chip
                     key={value}
-                    label={`${value[0]!.toUpperCase()}${value.slice(1)} · ${catalogue.lengths[value].pages}p`}
+                    label={`${t(LENGTH_KEYS[value])} · ${t('create.pagesSuffix', {
+                      count: catalogue.lengths[value].pages,
+                    })}`}
                     selected={length === value}
                     onPress={() => setLength(value)}
                   />
@@ -284,10 +303,12 @@ export default function Create() {
             </View>
 
             <Field
-              label="Anything you would like to happen?"
+              label={t('create.instructions')}
               value={instructions}
               onChangeText={setInstructions}
-              placeholder={`${selectedChild?.nickname ?? selectedChild?.name ?? 'Your child'} travels to space and learns why planets orbit the sun.`}
+              placeholder={t('create.instructionsPlaceholder', {
+                child: selectedChild?.nickname ?? selectedChild?.name ?? '',
+              })}
               multiline
               numberOfLines={3}
               maxLength={600}
@@ -297,12 +318,19 @@ export default function Create() {
 
             {!canAfford ? (
               <ErrorNotice
-                message={`This uses ${cost} credit(s) and you have ${profile?.creditBalance ?? 0}.`}
+                message={t('create.notEnoughCredits', {
+                  needed: cost,
+                  have: profile?.creditBalance ?? 0,
+                })}
               />
             ) : null}
 
             <Button
-              label={submitting ? 'Starting…' : `Create the story · ${cost} credit${cost === 1 ? '' : 's'}`}
+              label={
+                submitting
+                  ? t('create.starting')
+                  : t('create.createButton', { cost: t('settings.credits', { count: cost }) })
+              }
               loading={submitting}
               disabled={!canAfford || !childId || !themeSlug}
               onPress={submit}
@@ -313,18 +341,18 @@ export default function Create() {
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl }}>
           {step > 0 ? (
             <View style={{ flex: 1 }}>
-              <Button label="Back" variant="ghost" onPress={() => setStep(step - 1)} />
+              <Button label={t('common.back')} variant="ghost" onPress={() => setStep(step - 1)} />
             </View>
           ) : null}
           {step < 2 ? (
             <View style={{ flex: 1 }}>
-              <Button label="Next" onPress={() => setStep(step + 1)} disabled={!childId} />
+              <Button label={t('common.next')} onPress={() => setStep(step + 1)} disabled={!childId} />
             </View>
           ) : null}
         </View>
 
         <Body style={{ marginTop: spacing.lg, textAlign: 'center' }}>
-          {profile ? `${profile.creditBalance} credits left` : ''}
+          {profile ? t('create.creditsLeft', { count: profile.creditBalance }) : ''}
         </Body>
       </ScrollView>
     </Screen>

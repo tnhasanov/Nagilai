@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { Text, type ColorValue } from 'react-native';
 import { useSession } from '../../src/session';
+import { useT } from '../../src/i18n';
 import { usePalette } from '../../src/components/ui';
 
 /**
@@ -13,6 +14,7 @@ import { usePalette } from '../../src/components/ui';
 export default function AppLayout() {
   const { session } = useSession();
   const palette = usePalette();
+  const t = useT();
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
 
@@ -32,28 +34,28 @@ export default function AppLayout() {
       <Tabs.Screen
         name="library"
         options={{
-          title: 'Library',
+          title: t('tabs.library'),
           tabBarIcon: ({ color }) => <TabIcon glyph="📚" color={color} />,
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
-          title: 'New story',
+          title: t('tabs.create'),
           tabBarIcon: ({ color }) => <TabIcon glyph="✨" color={color} />,
         }}
       />
       <Tabs.Screen
         name="children"
         options={{
-          title: 'Children',
+          title: t('tabs.children'),
           tabBarIcon: ({ color }) => <TabIcon glyph="🧒" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color }) => <TabIcon glyph="⚙️" color={color} />,
         }}
       />

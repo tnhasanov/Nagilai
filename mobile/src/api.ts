@@ -114,6 +114,32 @@ export interface Profile {
   createdAt: string;
 }
 
+export interface RegisteredDevice {
+  id: string;
+  platform: string;
+  deviceName: string | null;
+  locale: string;
+  lastSeenAt: string;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  pushEnabled: boolean;
+  storyReady: boolean;
+  quietFromMinute: number | null;
+  quietToMinute: number | null;
+  timezone: string | null;
+  /**
+   * Whether the server can deliver a push at all. The app asks before
+   * prompting, because iOS gives an app exactly one permission prompt and
+   * spending it on a feature that cannot yet deliver wastes it.
+   */
+  available: boolean;
+  /** True only when a real push transport is configured server-side. */
+  providerLive: boolean;
+  devices: RegisteredDevice[];
+}
+
 export interface ChildProfile {
   id: string;
   name: string;
@@ -216,6 +242,32 @@ export interface StoryProgress {
   readyIllustrations: number;
 }
 
+/**
+ * Everything a child profile can carry.
+ *
+ * Deliberately the full set the API accepts rather than a convenient
+ * subset: a profile created on the phone should produce exactly as
+ * personalised a story as one created on the website, and a missing
+ * `personalityTraits` is a blander book, not a validation error anyone
+ * would notice.
+ */
+export interface ChildInput {
+  name: string;
+  nickname?: string;
+  ageYears?: number | null;
+  gender?: string;
+  preferredLanguage: string;
+  interests?: string;
+  favouriteAnimals?: string;
+  favouriteActivities?: string;
+  favouriteCharacters?: string;
+  personalityTraits?: string;
+  learningInterests?: string;
+  avatarColor?: string;
+  appearanceDescription?: string;
+  parentNotes?: string;
+}
+
 export interface CreateStoryInput {
   childId: string;
   languageCode: string;
@@ -236,7 +288,47 @@ export function createApi(token: string | null) {
     apiRequest<T>(path, { ...options, token });
 
   return {
-    me: () => call<{ ready: boolean; profile: Profile | null }>('/api/v1/me'),
+    me: () =>
+      call<{
+        ready: boolean;
+        profile: Profile | null;
+        notifications: NotificationPreferences;
+      }>('/api/v1/me'),
+
+    /**
+     * Updates the parent's own profile.
+     *
+     * `uiLocale` here is the *interface* language. It never changes an
+     * existing story, and it is not the default language for new ones --
+     * that comes from the child's profile.
+     */
+    updateProfile: (input: { displayName?: string; uiLocale: string; marketingOptIn?: boolean }) =>
+      call<{ updated: boolean; uiLocale: string }>('/api/v1/me', { method: 'PATCH', body: input }),
+
+    devices: {
+      get: () => call<{ notifications: NotificationPreferences }>('/api/v1/devices'),
+      register: (input: {
+        token: string;
+        platform: 'ios' | 'android' | 'web';
+        deviceId?: string | null;
+        deviceName?: string | null;
+        appVersion?: string | null;
+        locale?: string | null;
+      }) => call<{ registered: boolean }>('/api/v1/devices', { method: 'POST', body: input }),
+      preferences: (input: {
+        pushEnabled?: boolean;
+        storyReady?: boolean;
+        quietFromMinute?: number | null;
+        quietToMinute?: number | null;
+        timezone?: string | null;
+      }) =>
+        call<{ notifications: NotificationPreferences }>('/api/v1/devices', {
+          method: 'PATCH',
+          body: input,
+        }),
+      unregister: (token: string) =>
+        call<{ removed: boolean }>('/api/v1/devices', { method: 'DELETE', body: { token } }),
+    },
 
     catalogue: (locale: string, age?: number | null) =>
       call<Catalogue>(
@@ -246,9 +338,9 @@ export function createApi(token: string | null) {
 
     children: {
       list: () => call<{ children: ChildProfile[] }>('/api/v1/children'),
-      create: (input: unknown) =>
+      create: (input: ChildInput) =>
         call<{ child: ChildProfile }>('/api/v1/children', { method: 'POST', body: input }),
-      update: (id: string, input: unknown) =>
+      update: (id: string, input: Partial<ChildInput>) =>
         call<{ child: ChildProfile }>(`/api/v1/children/${id}`, { method: 'PATCH', body: input }),
       archive: (id: string) => call<{ archived: boolean }>(`/api/v1/children/${id}`, { method: 'DELETE' }),
     },

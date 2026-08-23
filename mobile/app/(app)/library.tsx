@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, View, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession } from '../../src/session';
+import { useT } from '../../src/i18n';
+import { useNetworkStatus } from '../../src/network';
 import { listOffline, type OfflineEntry } from '../../src/offline';
 import type { LibraryCard } from '../../src/api';
 import {
-  Body,
+  Banner,
   Button,
   Caption,
   EmptyState,
@@ -26,11 +28,17 @@ import {
  * before. Downloaded books are badged, and — importantly — they stay
  * openable when the list itself fails to load, which is what "offline"
  * has to mean in practice.
+ *
+ * When the connection comes back the list refetches itself. A library
+ * that stays stale after the train leaves the tunnel, until somebody
+ * happens to pull down on it, is the thing that makes an app feel broken.
  */
 export default function Library() {
   const { api } = useSession();
   const router = useRouter();
   const palette = usePalette();
+  const t = useT();
+  const { online, reconnectedAt } = useNetworkStatus();
 
   const [stories, setStories] = useState<LibraryCard[] | null>(null);
   const [offline, setOffline] = useState<OfflineEntry[]>([]);
@@ -48,9 +56,9 @@ export default function Library() {
       const downloaded = await listOffline();
       setOffline(downloaded);
       setStories((current) => current ?? []);
-      setError(caught instanceof Error ? caught.message : 'We could not load your library.');
+      setError(caught instanceof Error ? caught.message : t('library.loadFailed'));
     }
-  }, [api]);
+  }, [api, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,12 +66,20 @@ export default function Library() {
     }, [load]),
   );
 
-  if (stories === null) return <Loading label="Opening your library" />;
+  // Refetch the moment connectivity returns, rather than waiting for the
+  // parent to notice and pull down.
+  useEffect(() => {
+    if (reconnectedAt > 0) void load();
+  }, [reconnectedAt, load]);
+
+  if (stories === null) return <Loading label={t('library.opening')} />;
 
   const downloadedIds = new Set(offline.map((entry) => entry.storyId));
 
   return (
     <Screen edges={[]}>
+      {!online ? <Banner message={t('common.noConnection')} tone="warning" /> : null}
+
       <FlatList
         data={stories}
         keyExtractor={(item) => item.id}
@@ -84,9 +100,11 @@ export default function Library() {
         ListHeaderComponent={error ? <ErrorNotice message={error} /> : null}
         ListEmptyComponent={
           <EmptyState
-            title="Your library is waiting"
-            description="Make your first story and it will live here."
-            action={<Button label="Create a story" onPress={() => router.push('/(app)/create')} />}
+            title={t('library.emptyTitle')}
+            description={t('library.emptyDescription')}
+            action={
+              <Button label={t('library.createFirst')} onPress={() => router.push('/(app)/create')} />
+            }
           />
         }
         renderItem={({ item }) => (
@@ -131,7 +149,7 @@ export default function Library() {
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={[type.caption, { color: '#fff' }]}>Being made…</Text>
+                  <Text style={[type.caption, { color: '#fff' }]}>{t('library.beingMade')}</Text>
                 </View>
               ) : null}
 
@@ -147,7 +165,7 @@ export default function Library() {
                     paddingVertical: 3,
                   }}
                 >
-                  <Text style={[type.caption, { color: palette.sage }]}>Offline</Text>
+                  <Text style={[type.caption, { color: palette.sage }]}>{t('common.offline')}</Text>
                 </View>
               ) : null}
             </View>
@@ -157,7 +175,10 @@ export default function Library() {
                 {item.title}
               </Text>
               <Caption>
-                {[item.childDisplayName, item.pageCount > 0 ? `${item.pageCount} pages` : null]
+                {[
+                  item.childDisplayName,
+                  item.pageCount > 0 ? t('library.pagesCount', { count: item.pageCount }) : null,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </Caption>
@@ -167,9 +188,14 @@ export default function Library() {
       />
 
       {offline.length > 0 && stories.length === 0 ? (
-        <View style={{ padding: spacing.md }}>
-          <Body>You have {offline.length} book(s) saved on this device.</Body>
-        </View>
+        <Banner
+          message={t('library.savedOnDevice', {
+            count:
+              offline.length === 1
+                ? t('settings.bookCountOne')
+                : t('settings.bookCount', { count: offline.length }),
+          })}
+        />
       ) : null}
     </Screen>
   );

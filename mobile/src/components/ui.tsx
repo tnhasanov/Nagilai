@@ -4,6 +4,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -293,6 +294,90 @@ export function ErrorNotice({ message }: { message: string }) {
       }}
     >
       <Text style={[type.label, { color: palette.rose }]}>{message}</Text>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * A labelled setting with a switch.
+ *
+ * The whole row is the target rather than just the switch: a thumb-sized
+ * control at the far edge of a phone is a poor thing to have to hit.
+ */
+export function ToggleRow({
+  label,
+  description,
+  value,
+  onValueChange,
+  disabled = false,
+}: {
+  label: string;
+  description?: string | null;
+  value: boolean;
+  onValueChange: (next: boolean) => void;
+  disabled?: boolean;
+}) {
+  const palette = usePalette();
+
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value, disabled }}
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={() => onValueChange(!value)}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        paddingVertical: spacing.sm,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[type.label, { color: palette.ink }]}>{label}</Text>
+        {description ? <Caption>{description}</Caption> : null}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        trackColor={{ false: palette.line, true: palette.amber }}
+        thumbColor={palette.paperRaised}
+      />
+    </Pressable>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * A quiet, non-blocking notice.
+ *
+ * Used for the offline state, where an alert would be wrong: being
+ * offline is not an error, the downloaded books still open, and the app
+ * should say so calmly rather than shout.
+ */
+export function Banner({ message, tone = 'info' }: { message: string; tone?: 'info' | 'warning' }) {
+  const palette = usePalette();
+
+  return (
+    <View
+      accessibilityRole="alert"
+      style={{
+        backgroundColor: tone === 'warning' ? palette.amberSoft : palette.paperSunken,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+      }}
+    >
+      <Text style={[type.caption, { color: tone === 'warning' ? palette.amberDeep : palette.inkSoft, flex: 1 }]}>
+        {message}
+      </Text>
     </View>
   );
 }

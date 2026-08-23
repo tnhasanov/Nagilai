@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-import { z } from 'zod';
 import { errors } from '@/lib/errors';
 import { attempt, type ActionResult } from '@/lib/result';
 import { getCurrentUser, supabaseServer } from '@/services/supabase/server';

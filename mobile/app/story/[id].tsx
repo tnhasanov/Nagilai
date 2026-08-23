@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  Share,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { FlatList, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSession } from '../../src/session';
+import { useI18n } from '../../src/i18n';
+import { useNetworkStatus } from '../../src/network';
 import { ApiError, type ReaderPage, type ReaderStory, type StoryProgress } from '../../src/api';
 import { formatDuration, useNarration } from '../../src/narration';
-import { downloadStory, isDownloaded, offlineSupported, readOffline } from '../../src/offline';
 import {
+  downloadStory,
+  isComplete,
+  offlineEntry,
+  offlineSupported,
+  readOffline,
+  type OfflineEntry,
+} from '../../src/offline';
+import { hasAskedBefore, markAsked, permissionState, registerForPush } from '../../src/push';
+import {
+  Banner,
   Body,
   Button,
   Caption,
@@ -34,23 +38,26 @@ import {
  *
  * One route, three states: the waiting room while a book is being made,
  * the book itself, and a failure with a retry. Same URL throughout, so
- * the link a parent taps the moment they press Create keeps working.
+ * the link a parent taps the moment they press Create keeps working - and
+ * so does the deep link a notification carries.
  *
  * The native advantages over the web reader are the point of this screen:
- * narration keeps playing with the phone locked, and a downloaded book
- * renders from the filesystem with no connection at all.
+ * narration keeps playing with the phone locked and appears on the lock
+ * screen, and a downloaded book renders from the filesystem with no
+ * connection at all.
  */
 export default function StoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useSession();
   const router = useRouter();
   const navigation = useNavigation();
-  const palette = usePalette();
+  const { t } = useI18n();
+  const { online, reconnectedAt } = useNetworkStatus();
 
   const [story, setStory] = useState<ReaderStory | null>(null);
   const [progress, setProgress] = useState<StoryProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [downloaded, setDownloaded] = useState(false);
+  const [saved, setSaved] = useState<OfflineEntry | null>(null);
   const [downloading, setDownloading] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -73,14 +80,20 @@ export default function StoryScreen() {
         setError(null);
         return;
       }
-      setError(caught instanceof ApiError ? caught.message : 'We could not open this story.');
+      setError(caught instanceof ApiError ? caught.message : t('reader.openFailed'));
     }
-  }, [api, id]);
+  }, [api, id, t]);
 
   useEffect(() => {
     void load();
-    if (id) void isDownloaded(id).then(setDownloaded);
+    if (id) void offlineEntry(id).then(setSaved);
   }, [load, id]);
+
+  // A book that could not be opened offline becomes openable the moment
+  // the connection returns.
+  useEffect(() => {
+    if (reconnectedAt > 0) void load();
+  }, [reconnectedAt, load]);
 
   useEffect(() => {
     if (story) navigation.setOptions({ title: story.status === 'ready' ? story.title : '' });
@@ -109,24 +122,23 @@ export default function StoryScreen() {
   if (error && !story) {
     return (
       <Screen scroll>
+        {!online ? <Banner message={t('common.noConnection')} tone="warning" /> : null}
         <ErrorNotice message={error} />
-        <Button label="Try again" onPress={() => void load()} />
+        <Button label={t('common.retry')} onPress={() => void load()} />
       </Screen>
     );
   }
 
-  if (!story) return <Loading label="Opening the book" />;
+  if (!story) return <Loading label={t('reader.opening')} />;
 
   if (story.status === 'failed') {
     return (
       <Screen scroll>
-        <Title>We could not finish this story</Title>
-        <Body style={{ marginTop: spacing.sm }}>
-          Nothing has been charged for the part that failed. You can try again.
-        </Body>
+        <Title>{t('reader.failedTitle')}</Title>
+        <Body style={{ marginTop: spacing.sm }}>{t('reader.failedBody')}</Body>
         <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
           <Button
-            label="Try again"
+            label={t('common.retry')}
             loading={busy === 'retry'}
             onPress={async () => {
               setBusy('retry');
@@ -135,7 +147,11 @@ export default function StoryScreen() {
               setBusy(null);
             }}
           />
-          <Button label="Back to library" variant="ghost" onPress={() => router.back()} />
+          <Button
+            label={t('reader.backToLibrary')}
+            variant="ghost"
+            onPress={() => router.back()}
+          />
         </View>
       </Screen>
     );
@@ -148,13 +164,14 @@ export default function StoryScreen() {
   return (
     <Book
       story={story}
-      downloaded={downloaded}
+      online={online}
+      saved={saved}
       downloading={downloading}
       busy={busy}
       onDownload={async () => {
         setDownloading(0);
-        await downloadStory(story, setDownloading);
-        setDownloaded(true);
+        const { entry } = await downloadStory(story, setDownloading);
+        setSaved(entry);
         setDownloading(null);
       }}
       onShare={async () => {
@@ -170,7 +187,7 @@ export default function StoryScreen() {
             await Share.share({ message: `${story.title}\n${share.url}`, url: share.url });
           }
         } catch (caught) {
-          setError(caught instanceof ApiError ? caught.message : 'We could not create a link.');
+          setError(caught instanceof ApiError ? caught.message : t('reader.shareFailed'));
         } finally {
           setBusy(null);
         }
@@ -181,7 +198,7 @@ export default function StoryScreen() {
           await api.stories.narrate(story.id, {});
           setTimeout(() => void load(), 6000);
         } catch (caught) {
-          setError(caught instanceof ApiError ? caught.message : 'We could not start the narration.');
+          setError(caught instanceof ApiError ? caught.message : t('reader.narrateFailed'));
         } finally {
           setBusy(null);
         }
@@ -192,16 +209,55 @@ export default function StoryScreen() {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * The waiting room.
+ *
+ * Also the right moment to offer notifications: a parent is looking at a
+ * progress bar and has just been told this takes a minute or two, so
+ * "shall we tell you when it is done" answers a question they are already
+ * asking. Offering it at first launch instead would spend iOS's single
+ * permission prompt on a stranger.
+ */
 function GenerationProgress({ progress }: { progress: StoryProgress | null }) {
   const palette = usePalette();
+  const { t, locale } = useI18n();
+  const { api, notifications, setNotifications } = useSession();
+
+  const [offer, setOffer] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+
   const percent = progress?.percent ?? 5;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      // Three gates, all of which must pass before a prompt is worth it:
+      // the server can actually deliver, the OS has not already decided,
+      // and we have not asked before.
+      if (!notifications?.available) return;
+
+      const [state, asked] = await Promise.all([permissionState(), hasAskedBefore()]);
+      if (cancelled) return;
+
+      if (state === 'granted') setEnabled(true);
+      else if (state === 'undetermined' && !asked) setOffer(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notifications?.available]);
 
   return (
     <Screen scroll>
       <View style={{ alignItems: 'center', paddingTop: spacing.xxl, gap: spacing.md }}>
         <Text style={{ fontSize: 44 }}>✨</Text>
-        <Title>Making your story</Title>
-        <Body style={{ textAlign: 'center' }}>{progress?.statusMessage ?? 'Getting ready'}</Body>
+        <Title>{t('reader.makingTitle')}</Title>
+        <Body style={{ textAlign: 'center' }}>
+          {progress?.statusMessage ?? t('reader.makingDefault')}
+        </Body>
 
         <View
           style={{
@@ -222,12 +278,48 @@ function GenerationProgress({ progress }: { progress: StoryProgress | null }) {
 
         {progress && progress.totalIllustrations > 0 ? (
           <Caption>
-            {progress.readyIllustrations} of {progress.totalIllustrations} pictures painted
+            {t('reader.picturesPainted', {
+              ready: progress.readyIllustrations,
+              total: progress.totalIllustrations,
+            })}
           </Caption>
         ) : null}
 
+        {offer ? (
+          <Card style={{ gap: spacing.sm, marginTop: spacing.lg, width: '100%' }}>
+            <Heading>{t('notifications.permissionTitle')}</Heading>
+            <Body>{t('notifications.permissionBody')}</Body>
+            <Button
+              label={t('notifications.allow')}
+              loading={busy}
+              onPress={async () => {
+                setBusy(true);
+                await markAsked();
+                const result = await registerForPush(api, locale);
+                if (result.status === 'registered') {
+                  setEnabled(true);
+                  const { notifications: next } = await api.devices
+                    .get()
+                    .catch(() => ({ notifications: null }));
+                  if (next) setNotifications(next);
+                }
+                setOffer(false);
+                setBusy(false);
+              }}
+            />
+            <Button
+              label={t('notifications.notNow')}
+              variant="ghost"
+              onPress={async () => {
+                await markAsked();
+                setOffer(false);
+              }}
+            />
+          </Card>
+        ) : null}
+
         <Caption style={{ textAlign: 'center', marginTop: spacing.lg }}>
-          This usually takes a minute or two. You can close the app — we will keep going.
+          {enabled ? t('reader.makingFootnoteWithPush') : t('reader.makingFootnote')}
         </Caption>
       </View>
     </Screen>
@@ -238,7 +330,8 @@ function GenerationProgress({ progress }: { progress: StoryProgress | null }) {
 
 function Book({
   story,
-  downloaded,
+  online,
+  saved,
   downloading,
   busy,
   onDownload,
@@ -246,7 +339,8 @@ function Book({
   onNarrate,
 }: {
   story: ReaderStory;
-  downloaded: boolean;
+  online: boolean;
+  saved: OfflineEntry | null;
   downloading: number | null;
   busy: string | null;
   onDownload: () => void;
@@ -254,6 +348,7 @@ function Book({
   onNarrate: () => void;
 }) {
   const palette = usePalette();
+  const { t } = useI18n();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<Spread>>(null);
   const [index, setIndex] = useState(0);
@@ -261,6 +356,13 @@ function Book({
   const narration = useNarration(
     story.narration?.status === 'ready' ? story.narration.url : null,
     story.narration?.timings ?? null,
+    {
+      title: story.title,
+      subtitle: story.childDisplayName
+        ? t('reader.forChild', { name: story.childDisplayName })
+        : t('common.appName'),
+      artworkUrl: story.cover?.url ?? null,
+    },
   );
 
   /* The voice turns the page (§10). */
@@ -279,8 +381,21 @@ function Book({
     { kind: 'end' },
   ];
 
+  const missingAssets = saved ? saved.assetsExpected - saved.assetsStored : 0;
+
+  const downloadLabel =
+    downloading !== null
+      ? t('reader.savingPercent', { percent: Math.round(downloading * 100) })
+      : saved && isComplete(saved)
+        ? t('reader.savedOffline')
+        : saved
+          ? t('reader.saveIncomplete', { count: missingAssets })
+          : t('reader.saveOffline');
+
   return (
     <Screen edges={[]}>
+      {!online ? <Banner message={t('common.noConnection')} tone="warning" /> : null}
+
       <FlatList
         ref={listRef}
         data={spreads}
@@ -314,12 +429,14 @@ function Book({
           backgroundColor: palette.paper,
         }}
       >
-        {story.narration?.status === 'ready' && narration.isLoaded ? (
+        {narration.error ? (
+          <Button label={t('common.retry')} variant="secondary" onPress={narration.reload} />
+        ) : story.narration?.status === 'ready' && narration.isLoaded ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Pressable
               onPress={narration.toggle}
               accessibilityRole="button"
-              accessibilityLabel={narration.isPlaying ? 'Pause' : 'Play'}
+              accessibilityLabel={narration.isPlaying ? t('reader.pause') : t('reader.play')}
               style={{
                 width: 48,
                 height: 48,
@@ -329,10 +446,12 @@ function Book({
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ fontSize: 20 }}>{narration.isPlaying ? '⏸' : '▶️'}</Text>
+              <Text style={{ fontSize: 20 }}>
+                {narration.isBuffering ? '…' : narration.isPlaying ? '⏸' : '▶️'}
+              </Text>
             </Pressable>
 
-            <Pressable onPress={narration.restart} accessibilityLabel="Start again">
+            <Pressable onPress={narration.restart} accessibilityLabel={t('reader.startAgain')}>
               <Text style={{ fontSize: 18 }}>↺</Text>
             </Pressable>
 
@@ -358,23 +477,28 @@ function Book({
                 />
               </View>
               <Caption>
-                {formatDuration(narration.positionSeconds)} / {formatDuration(narration.durationSeconds)}
+                {formatDuration(narration.positionSeconds)} /{' '}
+                {formatDuration(narration.durationSeconds)}
               </Caption>
             </View>
 
             <Pressable
-              onPress={() => narration.setRate(narration.rate === 1 ? 1.25 : narration.rate === 1.25 ? 0.75 : 1)}
-              accessibilityLabel="Playback speed"
+              onPress={() =>
+                narration.setRate(
+                  narration.rate === 1 ? 1.25 : narration.rate === 1.25 ? 0.75 : 1,
+                )
+              }
+              accessibilityLabel={t('reader.playbackSpeed')}
             >
               <Text style={[type.label, { color: palette.inkSoft }]}>{narration.rate}×</Text>
             </Pressable>
           </View>
         ) : (
           <Button
-            label={story.narration ? 'Preparing the narration…' : 'Listen'}
+            label={story.narration ? t('reader.preparingNarration') : t('reader.listen')}
             variant="secondary"
             loading={busy === 'narrate' || Boolean(story.narration)}
-            disabled={Boolean(story.narration)}
+            disabled={Boolean(story.narration) || !online}
             onPress={onNarrate}
           />
         )}
@@ -383,30 +507,36 @@ function Book({
           {offlineSupported ? (
             <View style={{ flex: 1 }}>
               <Button
-                label={
-                  downloaded
-                    ? 'Saved offline'
-                    : downloading !== null
-                      ? `Saving ${Math.round(downloading * 100)}%`
-                      : 'Save offline'
-                }
+                label={downloadLabel}
                 variant="ghost"
-                disabled={downloaded || downloading !== null}
+                // A complete download needs nothing; an incomplete one is
+                // worth pressing again, which is what finishes it.
+                disabled={(saved !== null && isComplete(saved)) || downloading !== null || !online}
                 onPress={onDownload}
               />
             </View>
           ) : null}
           <View style={{ flex: 1 }}>
-            <Button label="Share" variant="ghost" loading={busy === 'share'} onPress={onShare} />
+            <Button
+              label={t('reader.share')}
+              variant="ghost"
+              loading={busy === 'share'}
+              disabled={!online}
+              onPress={onShare}
+            />
           </View>
         </View>
 
+        {saved && !isComplete(saved) ? (
+          <Caption style={{ textAlign: 'center' }}>{t('reader.saveIncompleteHint')}</Caption>
+        ) : null}
+
         <Caption style={{ textAlign: 'center' }}>
           {index === 0
-            ? 'Cover'
+            ? t('reader.cover')
             : index === spreads.length - 1
-              ? 'The End'
-              : `Page ${index} of ${story.pages.length}`}
+              ? t('reader.theEnd')
+              : t('reader.pageOf', { page: index, total: story.pages.length })}
         </Caption>
       </View>
     </Screen>
@@ -417,12 +547,18 @@ type Spread = { kind: 'cover' } | { kind: 'page'; page: ReaderPage } | { kind: '
 
 function CoverSpread({ story }: { story: ReaderStory }) {
   const palette = usePalette();
+  const { t } = useI18n();
 
   return (
     <Card style={{ flex: 1, padding: 0, overflow: 'hidden' }}>
       <View style={{ flex: 1, backgroundColor: palette.paperSunken }}>
         {story.cover?.url ? (
-          <Image source={{ uri: story.cover.url }} style={{ flex: 1 }} contentFit="cover" transition={200} />
+          <Image
+            source={{ uri: story.cover.url }}
+            style={{ flex: 1 }}
+            contentFit="cover"
+            transition={200}
+          />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 40 }}>📖</Text>
@@ -432,7 +568,9 @@ function CoverSpread({ story }: { story: ReaderStory }) {
 
       <View style={{ padding: spacing.lg, gap: spacing.xs }}>
         <Title>{story.title}</Title>
-        {story.childDisplayName ? <Caption>For {story.childDisplayName}</Caption> : null}
+        {story.childDisplayName ? (
+          <Caption>{t('reader.forChild', { name: story.childDisplayName })}</Caption>
+        ) : null}
         {story.dedication ? (
           <Body style={{ marginTop: spacing.sm, fontStyle: 'italic' }}>{story.dedication}</Body>
         ) : null}
@@ -467,10 +605,11 @@ function PageSpread({ page, total }: { page: ReaderPage; total: number }) {
 
 function EndSpread({ story }: { story: ReaderStory }) {
   const palette = usePalette();
+  const { t } = useI18n();
 
   return (
     <Card style={{ flex: 1, justifyContent: 'center', gap: spacing.md }}>
-      <Title style={{ textAlign: 'center' }}>The End</Title>
+      <Title style={{ textAlign: 'center' }}>{t('reader.theEnd')}</Title>
       <View style={{ height: 1, width: 48, backgroundColor: palette.amber, alignSelf: 'center' }} />
 
       {story.educationalTakeaway || story.discussionQuestions.length > 0 ? (
@@ -484,7 +623,7 @@ function EndSpread({ story }: { story: ReaderStory }) {
           }}
         >
           <Text style={[type.caption, { color: palette.amberDeep, letterSpacing: 1 }]}>
-            FOR GROWN-UPS
+            {t('reader.forGrownUps')}
           </Text>
           {story.educationalTakeaway ? (
             <Text style={[type.body, { color: palette.ink }]}>{story.educationalTakeaway}</Text>

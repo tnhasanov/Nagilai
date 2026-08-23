@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession } from '../../src/session';
+import { useT } from '../../src/i18n';
 import type { ChildProfile } from '../../src/api';
 import {
   Body,
@@ -28,6 +29,7 @@ export default function Children() {
   const { api } = useSession();
   const router = useRouter();
   const palette = usePalette();
+  const t = useT();
 
   const [children, setChildren] = useState<ChildProfile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +40,10 @@ export default function Children() {
       setChildren(next);
       setError(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'We could not load your children.');
+      setError(caught instanceof Error ? caught.message : t('children.loadFailed'));
       setChildren([]);
     }
-  }, [api]);
+  }, [api, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,9 +60,9 @@ export default function Children() {
 
         {children.length === 0 ? (
           <EmptyState
-            title="No child profiles yet"
-            description="Add your first child and we will personalise every story around them."
-            action={<Button label="Add a child" onPress={() => router.push('/child/new')} />}
+            title={t('children.emptyTitle')}
+            description={t('children.emptyDescription')}
+            action={<Button label={t('children.add')} onPress={() => router.push('/child/new')} />}
           />
         ) : (
           <>
@@ -86,28 +88,50 @@ export default function Children() {
                     <Heading>{child.nickname ?? child.name}</Heading>
                     <Caption>
                       {[
-                        child.ageYears !== null ? `${child.ageYears} years old` : null,
+                        child.ageYears !== null
+                          ? t('children.yearsOld', { count: child.ageYears })
+                          : null,
                         child.preferredLanguage,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
                     </Caption>
-                    {child.interests.length > 0 ? (
-                      <Caption numberOfLines={1}>{child.interests.slice(0, 4).join(' · ')}</Caption>
+                    {summarise(child).length > 0 ? (
+                      <Caption numberOfLines={1}>{summarise(child).join(' · ')}</Caption>
                     ) : null}
                   </View>
                 </Card>
               </Pressable>
             ))}
 
-            <Button label="Add another child" variant="secondary" onPress={() => router.push('/child/new')} />
+            <Button
+              label={t('children.addAnother')}
+              variant="secondary"
+              onPress={() => router.push('/child/new')}
+            />
           </>
         )}
 
         <Body style={{ textAlign: 'center', marginTop: spacing.md }}>
-          These details are never public and are never used to train anything.
+          {t('children.privacyNote')}
         </Body>
       </ScrollView>
     </Screen>
   );
+}
+
+/**
+ * A one-line flavour of who this child is.
+ *
+ * Draws from every list field rather than only `interests`, so a profile
+ * whose personality and learning interests are filled in but whose
+ * interests are not still reads as a person rather than as blank space.
+ */
+function summarise(child: ChildProfile): string[] {
+  return [
+    ...child.interests,
+    ...child.favouriteAnimals,
+    ...child.favouriteActivities,
+    ...child.personalityTraits,
+  ].slice(0, 4);
 }

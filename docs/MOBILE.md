@@ -57,11 +57,12 @@ rejected. What the app does that a web view cannot:
 | Capability | Why it clears 4.2 | Status |
 | --- | --- | --- |
 | Background audio | The story keeps playing with the screen locked, with system audio focus | built |
+| Lock-screen controls | Play, pause and scrub from the lock screen, with the cover as artwork | built |
 | Offline books | Assets copied to the device; a book reads with no connection | built |
 | Keychain sessions | Tokens in the OS keystore rather than app storage | built |
 | Native share sheet | System share UI for a book link | built |
-| Push notifications | "Your story is ready" via APNs/FCM | not yet — see below |
-| Sign in with Apple | Required once you offer Google sign-in | not yet |
+| Push notifications | "Your story is ready" via APNs/FCM | built — needs credentials |
+| Sign in with Apple | Required once you offer Google sign-in | built — needs credentials |
 
 The first two are also simply a better product. A bedtime story that plays
 with the screen off, from a book already on the phone, is the version
@@ -72,7 +73,7 @@ parents actually want.
 ```bash
 cd mobile
 npm install
-cp .env.example .env.local
+cp .env.example .env.local   # says which credentials each feature needs
 npx expo start
 ```
 
@@ -134,12 +135,102 @@ reused even after an app is unpublished.
 
 | Item | Effort |
 | --- | --- |
-| Push notifications ("your story is ready") | small — `expo-notifications` plus a device-token table and a job hook |
-| Sign in with Apple | small — required before iOS submission |
-| Google sign-in in the app | small — `expo-auth-session` |
 | Remix, rename and delete in the app | small — the endpoints exist |
 | Story PDF export to the share sheet | small — the endpoint exists |
-| Localised interface (az/ru/tr) | medium — the four dictionaries exist on the web and can be lifted |
+| Per-page illustration retry in the app | small — the endpoint exists |
+| Quiet-hours picker | small — the API accepts the values, the app only displays them |
+
+---
+
+## Credentials the app needs, and exactly where each one comes from
+
+Everything below is **built and inert until its credential exists**. None
+of them has a placeholder in this repository: a fake client id produces a
+rejected token rather than a clearer error, so the app hides the control
+instead.
+
+### Expo / EAS
+
+| What | Where | Goes in |
+| --- | --- | --- |
+| Project id | `eas init` inside `mobile/` | `mobile/app.json` → `extra.eas.projectId` |
+
+Until this is real, `expoProjectId()` returns null, the app never asks for
+notification permission, and no push token is ever requested. The
+placeholder `00000000-…` committed here is recognised and treated as
+absent, deliberately.
+
+**Verify:** `eas build --profile preview --platform android` starts.
+
+### Push notifications
+
+| What | Where | Goes in |
+| --- | --- | --- |
+| APNs key (iOS) | developer.apple.com → Keys → new key with "Apple Push Notifications service" | `eas credentials` → iOS → Push Key |
+| FCM service account (Android) | Firebase console → Project settings → Service accounts → Generate key | `eas credentials` → Android → FCM V1 |
+| Server switch | — | `EXPO_PUSH_ENABLED=true` in the web app's environment |
+| Expo access token *(optional)* | Expo dashboard → Account settings → Access tokens | `EXPO_ACCESS_TOKEN` |
+
+Without `EXPO_PUSH_ENABLED`, the server runs the **console provider**:
+every notification is composed, deduplicated, checked against the parent's
+preferences and quiet hours, and then written to the log with
+`reason: provider_not_live` instead of being sent. That is how the whole
+path — registration, preferences, deep link, deduplication across twelve
+illustration jobs — is testable today with no Apple or Google account.
+
+There is also a feature flag, `push_notifications_enabled` in
+`app_settings`, which defaults to **false**. The app asks the server
+whether push is available before prompting, because iOS grants exactly one
+permission prompt per install and spending it on a feature that cannot yet
+deliver wastes it permanently.
+
+**Verify:** with the console provider, generate a story and watch the
+server log for `push (not sent: no provider configured)` carrying the
+right title and `storyId`.
+
+### Sign in with Google
+
+Three OAuth **client ids** (public, they ship in the binary) plus one
+client **secret** (private, Supabase only). All from Google Cloud Console
+→ APIs & Services → Credentials, in one project:
+
+| Client type | Configured with | Goes in |
+| --- | --- | --- |
+| Web application | Redirect URI `https://<project>.supabase.co/auth/v1/callback` | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, **and** its id + secret into Supabase → Authentication → Providers → Google |
+| iOS | Bundle ID `com.nagilai.app` | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` |
+| Android | Package `com.nagilai.app` + SHA-1 from `eas credentials` | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` |
+
+The web client id is required on **every** platform: Supabase validates
+the id token against it, so an iOS-only configuration produces a token
+Supabase then refuses.
+
+**Verify:** the Google button appears on the sign-in screen. It is hidden
+whenever this platform's ids are missing.
+
+### Sign in with Apple
+
+No environment variable. The entitlement is declared in `app.json`
+(`ios.usesAppleSignIn`) and the app asks the OS at runtime whether the
+capability is actually available, so a build without it hides the button
+rather than throwing when it is pressed.
+
+| What | Where |
+| --- | --- |
+| Apple Developer Program | developer.apple.com — $99/year |
+| "Sign in with Apple" capability | developer.apple.com → Identifiers → `com.nagilai.app` |
+| Services ID, key, team id | developer.apple.com, then Supabase → Authentication → Providers → Apple |
+
+**These two ship together.** App Store guideline 4.8 requires an
+equivalent private sign-in option wherever a third-party social login is
+offered, so shipping Google on iOS without Apple is a rejection.
+`socialSignInReady()` in `src/auth-providers.ts` reports on the pair for
+exactly that reason.
+
+### App Store Connect
+
+| What | Where | Goes in |
+| --- | --- | --- |
+| App id (`ascAppId`) | App Store Connect, after creating the app record | `mobile/eas.json` → `submit.production.ios.ascAppId` |
 
 ---
 
@@ -308,9 +399,14 @@ form — it lists exactly what is collected and what is never done.
 | Digital Asset Links driven by configuration | done |
 | Launcher shortcuts (New story, My library) | done |
 | Safe-area padding for the reader's fixed controls | done |
-| Play Store `.aab` | needs your package name and keystore |
+| Native app interface in az/en/ru/tr | done — device language, then profile, then an in-app picker |
+| Full child profile on the phone, matching the website | done |
+| Push notifications end to end except the last hop | done — console provider until credentials exist |
+| Lock-screen playback controls | done |
+| Offline books verified against the filesystem, resumable, cleared on sign-out | done |
+| Apple and Google sign-in | done — hidden until their client ids exist |
+| Play Store `.aab` | needs your keystore |
 | Native app for both stores | built in `mobile/` — needs an Apple account and an EAS project id |
-| Push notifications, Sign in with Apple | not yet |
 
 ## Costs
 

@@ -48,6 +48,7 @@ feature flag. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 | [Routes](docs/ROUTES.md) | Every page and endpoint, and who may reach it |
 | [Security & privacy](docs/SECURITY-PRIVACY.md) | Children's data, threat model, what is enforced where |
 | [Setup](docs/SETUP.md) | Supabase, OpenAI, Vercel, storage, local development |
+| [Operations](docs/OPERATIONS.md) | Driving the generation queue from any scheduler |
 | [Mobile & app stores](docs/MOBILE.md) | Hosting, the native app for both stores, and the optional TWA |
 | [Native app](mobile/README.md) | The Expo app for iOS and Android |
 | [Roadmap](docs/ROADMAP.md) | Phase 1–4 and what is deliberately deferred |
