@@ -1,10 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
-import { en, type Dictionary } from './dictionaries/en';
-import { az } from './dictionaries/az';
-import { ru } from './dictionaries/ru';
-import { tr } from './dictionaries/tr';
+import {
+  DEFAULT_LOCALE,
+  DICTIONARIES,
+  isLocale,
+  negotiateLocale,
+  translate,
+  type Dictionary,
+  type Locale,
+} from './locales';
+import { en } from './dictionaries/en';
 
 /**
  * Interface language for the native app.
@@ -27,61 +33,25 @@ import { tr } from './dictionaries/tr';
  *
  * Changing it writes back to the profile as well as to the device, so the
  * two surfaces converge rather than drifting.
+ *
+ * The list, the dictionaries and the pure functions live in `./locales`,
+ * which imports nothing from React or Expo and is therefore testable on
+ * its own.
  */
 
-export const LOCALES = ['az-AZ', 'en-US', 'ru-RU', 'tr-TR'] as const;
-export type Locale = (typeof LOCALES)[number];
-
-export const DEFAULT_LOCALE: Locale = 'en-US';
-
-const DICTIONARIES: Record<Locale, Dictionary> = {
-  'az-AZ': az,
-  'en-US': en,
-  'ru-RU': ru,
-  'tr-TR': tr,
-};
-
-/** Endonyms: a language picker that names languages in English is useless. */
-export const LOCALE_NAMES: Record<Locale, string> = {
-  'az-AZ': 'Azərbaycanca',
-  'en-US': 'English',
-  'ru-RU': 'Русский',
-  'tr-TR': 'Türkçe',
-};
-
-export const LOCALE_FLAGS: Record<Locale, string> = {
-  'az-AZ': '🇦🇿',
-  'en-US': '🇬🇧',
-  'ru-RU': '🇷🇺',
-  'tr-TR': '🇹🇷',
-};
+export {
+  LOCALES,
+  DEFAULT_LOCALE,
+  LOCALE_NAMES,
+  LOCALE_FLAGS,
+  isLocale,
+  negotiateLocale,
+  format,
+  type Locale,
+  type Dictionary,
+} from './locales';
 
 const STORAGE_KEY = 'nagilai.locale';
-
-export function isLocale(value: unknown): value is Locale {
-  return typeof value === 'string' && (LOCALES as readonly string[]).includes(value);
-}
-
-/**
- * Best supported locale for a list of language tags.
- *
- * Matches the exact tag first, then the base language, so a phone set to
- * `az` or `az-Latn-AZ` or `ru-KZ` all land somewhere sensible instead of
- * falling through to English.
- */
-export function negotiateLocale(tags: readonly string[]): Locale | null {
-  for (const tag of tags) {
-    const exact = LOCALES.find((locale) => locale.toLowerCase() === tag.toLowerCase());
-    if (exact) return exact;
-  }
-  for (const tag of tags) {
-    const base = tag.split('-')[0]?.toLowerCase();
-    if (!base) continue;
-    const match = LOCALES.find((locale) => locale.split('-')[0]?.toLowerCase() === base);
-    if (match) return match;
-  }
-  return null;
-}
 
 /** The phone's language preference, in order. */
 export function deviceLocale(): Locale {
@@ -93,24 +63,11 @@ export function deviceLocale(): Locale {
   }
 }
 
-/**
- * Substitutes `{name}` placeholders.
- *
- * Deliberately minimal, for the same reason the website's is: the
- * alternative is an ICU message formatter in a phone bundle for a handful
- * of counts. Where grammar genuinely differs -- Russian plurals -- the
- * translation is written to sidestep it ("Страниц: 3" rather than
- * "3 страницы").
- */
-export function format(template: string, values?: Record<string, string | number>): string {
-  if (!values) return template;
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
-    const value = values[key];
-    return value === undefined ? match : String(value);
-  });
-}
-
 /* ------------------------------------------------------------------ */
+
+type DictionaryKey = {
+  [Section in keyof Dictionary]: `${Section & string}.${keyof Dictionary[Section] & string}`;
+}[keyof Dictionary];
 
 interface I18nValue {
   locale: Locale;
@@ -128,10 +85,6 @@ interface I18nValue {
   /** Adopts the profile's locale unless the parent already chose one here. */
   adoptProfileLocale: (locale: string | null | undefined) => void;
 }
-
-type DictionaryKey = {
-  [Section in keyof Dictionary]: `${Section & string}.${keyof Dictionary[Section] & string}`;
-}[keyof Dictionary];
 
 const I18nContext = createContext<I18nValue | null>(null);
 
@@ -189,12 +142,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const dictionary = DICTIONARIES[locale] ?? en;
 
   const t = useCallback(
-    (key: DictionaryKey, values?: Record<string, string | number>) => {
-      const [section, entry] = key.split('.') as [keyof Dictionary, string];
-      const table = dictionary[section] as Record<string, string> | undefined;
-      const fallback = (en[section] as Record<string, string> | undefined)?.[entry];
-      return format(table?.[entry] ?? fallback ?? key, values);
-    },
+    (key: DictionaryKey, values?: Record<string, string | number>) =>
+      translate(dictionary, key, values),
     [dictionary],
   );
 
@@ -216,5 +165,3 @@ export function useI18n(): I18nValue {
 export function useT(): I18nValue['t'] {
   return useI18n().t;
 }
-
-export type { Dictionary };

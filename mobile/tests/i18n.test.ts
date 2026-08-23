@@ -1,18 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { en } from '../mobile/src/i18n/dictionaries/en';
-import { az } from '../mobile/src/i18n/dictionaries/az';
-import { ru } from '../mobile/src/i18n/dictionaries/ru';
-import { tr } from '../mobile/src/i18n/dictionaries/tr';
+import { en } from '../src/i18n/dictionaries/en';
+import { az } from '../src/i18n/dictionaries/az';
+import { ru } from '../src/i18n/dictionaries/ru';
+import { tr } from '../src/i18n/dictionaries/tr';
+import { format, isLocale, negotiateLocale, translate, LOCALES } from '../src/i18n/locales';
 
 /**
  * The native app's four interface languages.
  *
- * Tested from the web suite deliberately: the mobile package has no test
- * runner of its own, the dictionaries are plain data with no React Native
- * imports, and a missing Azerbaijani string should fail CI rather than
- * ship. TypeScript already enforces that the *keys* match; what it cannot
- * check is whether a "translation" is the English text pasted across, or
- * whether a placeholder survived.
+ * TypeScript already enforces that the *keys* match across locales. What
+ * it cannot check is whether a "translation" is the English text pasted
+ * across, or whether a placeholder survived the translation — both of
+ * which read fine in review and are obvious on a phone.
  *
  * Azerbaijani is the primary market, so "we shipped English to Baku" is
  * the specific failure worth a test.
@@ -118,5 +117,85 @@ describe('mobile dictionaries', () => {
       expect(dictionary.settings.languageHint.length).toBeGreaterThan(20);
       expect(dictionary.create.storyLanguageHint.length).toBeGreaterThan(20);
     }
+  });
+});
+
+describe('locale negotiation', () => {
+  it('prefers an exact tag', () => {
+    expect(negotiateLocale(['ru-RU'])).toBe('ru-RU');
+    expect(negotiateLocale(['az-AZ'])).toBe('az-AZ');
+  });
+
+  it('is case-insensitive about the region', () => {
+    expect(negotiateLocale(['ru-ru'])).toBe('ru-RU');
+    expect(negotiateLocale(['AZ-az'])).toBe('az-AZ');
+  });
+
+  it('falls back to the base language', () => {
+    // A phone set to plain `az`, or to Azerbaijani with a script subtag,
+    // must still get Azerbaijani rather than English.
+    expect(negotiateLocale(['az'])).toBe('az-AZ');
+    expect(negotiateLocale(['az-Latn-AZ'])).toBe('az-AZ');
+    expect(negotiateLocale(['ru-KZ'])).toBe('ru-RU');
+    expect(negotiateLocale(['tr-CY'])).toBe('tr-TR');
+  });
+
+  it('lets an exact match on a later tag beat a base match on an earlier one', () => {
+    // The reason negotiation is two passes rather than one: a device
+    // listing "ru-KZ, az-AZ" wants Azerbaijani exactly, not Russian by
+    // approximation.
+    expect(negotiateLocale(['ru-KZ', 'az-AZ'])).toBe('az-AZ');
+  });
+
+  it('respects the order of the phone preference list', () => {
+    expect(negotiateLocale(['tr-TR', 'ru-RU'])).toBe('tr-TR');
+    expect(negotiateLocale(['ru-RU', 'tr-TR'])).toBe('ru-RU');
+  });
+
+  it('returns null when nothing matches, rather than guessing', () => {
+    expect(negotiateLocale(['de-DE', 'fr-FR'])).toBeNull();
+    expect(negotiateLocale([])).toBeNull();
+  });
+
+  it('recognises exactly the four shipped locales', () => {
+    for (const locale of LOCALES) expect(isLocale(locale)).toBe(true);
+    expect(isLocale('de-DE')).toBe(false);
+    expect(isLocale('az')).toBe(false);
+    expect(isLocale(null)).toBe(false);
+    expect(isLocale(undefined)).toBe(false);
+  });
+});
+
+describe('placeholder substitution', () => {
+  it('fills every named value', () => {
+    expect(format('Page {page} of {total}', { page: 2, total: 10 })).toBe('Page 2 of 10');
+  });
+
+  it('substitutes a placeholder used more than once', () => {
+    expect(format('{a} and {a}', { a: 'x' })).toBe('x and x');
+  });
+
+  it('leaves an unknown placeholder visible rather than blanking it', () => {
+    // A hole in a sentence reads as finished copy; `{count}` does not.
+    expect(format('You have {count} books', {})).toBe('You have {count} books');
+  });
+
+  it('is a no-op with no values', () => {
+    expect(format('No placeholders here')).toBe('No placeholders here');
+  });
+});
+
+describe('lookup', () => {
+  it('resolves a dotted key', () => {
+    expect(translate(az, 'tabs.library')).toBe('Kitabxana');
+  });
+
+  it('falls back to English for a key a locale somehow lacks', () => {
+    const partial = { ...az, tabs: {} } as unknown as typeof az;
+    expect(translate(partial, 'tabs.library')).toBe(en.tabs.library);
+  });
+
+  it('returns the key itself rather than throwing on nonsense', () => {
+    expect(translate(az, 'nope.missing')).toBe('nope.missing');
   });
 });

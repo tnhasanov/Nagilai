@@ -77,7 +77,7 @@ jobs:
         run: npm run db:verify
 
   mobile:
-    name: Mobile — types and bundle
+    name: Mobile — types, tests, bundle
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -99,6 +99,14 @@ jobs:
 
       - name: Types
         run: npm run typecheck
+
+      # Locale negotiation, placeholder substitution, and whether every
+      # translation is present and actually translated. These live here
+      # rather than in the web suite because their dependencies do: run
+      # from the root, they need `mobile/node_modules` to resolve the
+      # Expo tsconfig, which the web job has no reason to install.
+      - name: Tests
+        run: npm test
 
       # Metro is the same bundler the native builds use, so a bundle
       # failure here is a bundle failure on device. This needs no Expo

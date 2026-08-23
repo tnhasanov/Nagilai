@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "lint": "expo lint",
     "export:web": "expo export --platform web --output-dir .expo-export",
     "doctor": "npx expo-doctor"
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.18",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.11"
   }
 }
