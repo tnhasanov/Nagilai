@@ -74,9 +74,13 @@ container crontab and an uptime pinger all satisfy the same contract, and
 properties make that real rather than aspirational: claiming is atomic, so
 any number of simultaneous triggers is harmless; a run that ends with work
 still due wakes its own successor, bounded at twenty links, so cadence
-decides when a book *starts* and never whether it finishes; and retries and
-reaping are keyed to absolute timestamps, so a missed tick costs latency and
-no work. The Vercel-shaped limits are request parameters clamped to the
+decides when a book *starts* rather than whether it finishes; and retries
+and reaping are keyed to absolute timestamps, so a missed tick costs latency
+and no work. One honest caveat: a job backing off after a failure is not yet
+*due*, so it does not extend the chain and waits for the next tick — cadence
+decides how long a retry sits, which is why `vercel.json` ships a
+Hobby-compatible daily schedule and `docs/OPERATIONS.md` says plainly what
+that costs. The Vercel-shaped limits are request parameters clamped to the
 host's own timeout, not constants in the code path.
 
 **Full-cost pre-check on story creation.** Illustrations are charged per

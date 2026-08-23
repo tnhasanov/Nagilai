@@ -20,19 +20,20 @@ the same job to two runners. You can point a cron *and* an uptime pinger
 *and* a GitHub Action at this endpoint simultaneously and the only cost is
 some wasted HTTP requests.
 
-**The worker chains itself.** When a run ends with jobs still due, it wakes
-its own successor before returning. The queue therefore drains at its own
-pace rather than at the scheduler's. The difference between a once-a-minute
-tick and a once-a-day tick is *when a book starts*, never whether it
-finishes.
+**The worker chains itself.** When a run ends with jobs still *due*, it
+wakes its own successor before returning, so a queue drains at its own pace
+rather than at the scheduler's. One honest limit: a job that failed and is
+backing off is queued but not yet due, so it does not extend the chain. It
+waits for the next tick. Cadence therefore does not decide whether a book
+finishes on the happy path — but it does decide how long a *retry* sits.
 
 **Nothing is lost if a tick is missed.** Stalled jobs are reaped by
 wall-clock age. Retries are scheduled by a `run_after` timestamp. Both are
 absolute times, not tick counts, so a scheduler that goes down for six
 hours costs six hours of latency and no work.
 
-The practical consequence: **any of the options below is correct.** Pick
-on cost and convenience, not on capability.
+The practical consequence: **any of the options below is correct**, and the
+choice is about how quickly a failure recovers, not whether it does.
 
 ---
 
@@ -83,21 +84,31 @@ handed back deliberately.
 
 ## Option 1 — Vercel Cron
 
-Already configured in `vercel.json`:
+Configured in `vercel.json`, and deliberately set to **once a day**:
 
 ```json
-{ "crons": [{ "path": "/api/jobs/worker", "schedule": "* * * * *" }] }
+{ "crons": [{ "path": "/api/jobs/worker", "schedule": "0 3 * * *" }] }
 ```
 
-Vercel sends `Authorization: Bearer $CRON_SECRET` automatically once
-`CRON_SECRET` is set as an environment variable.
+Daily because that is what Vercel's **Hobby** plan allows, and a
+per-minute schedule in this file makes the deployment fail rather than
+quietly downgrade. Vercel sends `Authorization: Bearer $CRON_SECRET`
+automatically once `CRON_SECRET` is set as an environment variable.
 
-**Check your plan's cron frequency limit.** The Hobby tier restricts how
-often a cron may run. If per-minute is not available, this still works —
-change the schedule to whatever the plan allows. Generation latency goes
-up only for the *first* job of an idle queue; once one book starts, the
-worker's self-continuation drains the rest without waiting for another
-tick.
+**On Pro, change it to `* * * * *`.** Here is what the difference actually
+costs, because "the worker self-continues so cadence does not matter" is
+true of the *happy path* and not of the retry path:
+
+| Situation | Daily cron | Per-minute cron |
+| --- | --- | --- |
+| Parent presses Create | Starts immediately — the app nudges the worker inline, and the run chains until the queue is drained | Same |
+| An illustration fails and backs off 2 minutes | The chain stops, because only *due* work continues it. The retry waits for the next daily tick. | Retries about 2 minutes later |
+| The queue stalled overnight with nobody using the app | Cleared at 03:00 | Cleared within a minute |
+
+So on Hobby a parent whose picture failed sees a gap in the book until
+either the daily tick or their own tap on the per-image retry button,
+which enqueues immediately. That is survivable, not good. Twenty dollars a
+month fixes it, and it is the first thing worth paying for.
 
 ---
 
