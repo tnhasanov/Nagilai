@@ -164,61 +164,110 @@ form — it lists exactly what is collected and what is never done.
 
 ---
 
-## iOS — the honest version
+## iOS and Android — the native app
 
 **A PWA cannot be published to the App Store.** iOS users can install
-Nagilai from Safari (*Share → Add to Home Screen*, which the layout is set
-up for), but that is not a store listing.
+Nagilai from Safari (*Share → Add to Home Screen*), but that is not a
+store listing.
 
-For the App Store you need a native shell, and you need to clear
-**guideline 4.2 (Minimum Functionality)** — Apple rejects apps that are
-"simply a repackaged website". A TWA-equivalent will be rejected.
+The native app lives in [`../mobile`](../mobile). It is Expo (React
+Native) against the same Supabase backend and the same `/api/v1` as the
+website — one identity system, one database, one set of row level
+security policies.
 
-### What clears 4.2
+### Why it is not a wrapper
 
-Genuinely native capability the web cannot provide:
+Apple's **guideline 4.2 (Minimum Functionality)** rejects apps that are
+"simply a repackaged website". A Capacitor shell around this site would be
+rejected. What the app does that a web view cannot:
 
-| Capability | Why it satisfies 4.2 | Effort |
+| Capability | Why it clears 4.2 | Status |
 | --- | --- | --- |
-| **Offline library** — download a book to the device | Real local storage and file management | medium |
-| **Native audio** — lock-screen controls, background playback, AirPlay | `MPNowPlayingInfoCenter`; a web audio element cannot do this | medium |
-| **Push notifications** — "your story is ready" | Real APNs, not web push | small |
-| **Share sheet** — send a book as a PDF | System integration | small |
-| **Sign in with Apple** | Required anyway once you offer Google sign-in | small |
+| Background audio | The story keeps playing with the screen locked, with system audio focus | built |
+| Offline books | Assets copied to the device; a book reads with no connection | built |
+| Keychain sessions | Tokens in the OS keystore rather than app storage | built |
+| Native share sheet | System share UI for a book link | built |
+| Push notifications | "Your story is ready" via APNs/FCM | not yet — see below |
+| Sign in with Apple | Required once you offer Google sign-in | not yet |
 
-The first two are also genuinely better for the product: a bedtime story
-that plays with the screen off, from a book already on the device, is the
-version parents actually want.
+The first two are also simply a better product. A bedtime story that plays
+with the screen off, from a book already on the phone, is the version
+parents actually want.
 
-### How to build it
+### Building it
 
-**Expo (React Native)** against the existing Supabase backend. Not
-Capacitor: a Capacitor wrapper around this site is exactly the "repackaged
-website" 4.2 exists to reject.
+```bash
+cd mobile
+npm install
+cp .env.example .env.local
+npx expo start
+```
 
-The backend is already ready for it — Supabase Auth issues JWTs that a
-native client can use directly, and RLS enforces the same rules whatever
-the client is. What is missing is a REST surface: today most mutations are
-Next.js server actions, which only a browser can call. A mobile client
-needs endpoints for auth, children, story creation, generation status and
-asset URLs.
+Native modules need a development build rather than Expo Go:
 
-Rough shape of the work:
+```bash
+npm i -g eas-cli
+eas login
+eas init                 # writes the real projectId into app.json
+eas build --profile development --platform ios
+eas build --profile development --platform android
+```
 
-1. Add the REST API layer (~1 week).
-2. Expo app: auth, child profiles, wizard, reader, offline library, native
-   audio (~4–6 weeks).
-3. Apple Developer Program (**$99/year**), App Store listing, privacy
-   nutrition labels, **App Store Kids Category** review if you opt into it.
+**You do not need a Mac.** EAS builds iOS in the cloud. You do need an
+Apple Developer account to sign the build.
 
-### Kids Category
+### Shipping it
 
-Optional, and stricter: no third-party analytics, no external links
-without a parental gate, no behavioural advertising. Nagilai already meets
-most of it. Worth it for discovery, but only once the app is stable —
-review is slower and rejections are more expensive.
+```bash
+# Store builds
+eas build --profile production --platform android    # → .aab
+eas build --profile production --platform ios        # → .ipa
 
----
+# Submit
+eas submit --platform android
+eas submit --platform ios
+```
+
+`eas.json` already carries the three profiles and the per-profile API URL.
+Set the production URL before the first store build.
+
+### iOS specifics
+
+- `UIBackgroundModes: ["audio"]` is declared in `app.json`. Apple checks
+  that an app claiming it genuinely plays audio in the background — this
+  one does, and that is the point.
+- Privacy nutrition labels: declare email and the child details a parent
+  enters. Purpose is app functionality. Not linked to advertising, not
+  used for tracking.
+- **Sign in with Apple becomes mandatory** the moment you ship Google
+  sign-in. Add it before submitting, not after a rejection.
+- The **Kids Category** is optional and stricter: no third-party
+  analytics, no external links without a parental gate, no behavioural
+  advertising. Nagilai already meets most of it. Worth it for discovery
+  once the app is stable — review is slower and rejections cost more.
+
+### Android specifics
+
+You now have two possible Android packages. Pick one:
+
+- **The native app** (`mobile/`), which shares a store listing and package
+  name with iOS, or
+- **The TWA** described above, which is faster to ship.
+
+**Do not ship both under the same package name.** If you have already
+published the TWA as `com.nagilai.app`, the native app must either replace
+it with a higher `versionCode` or use a different package.
+
+### What is still missing
+
+| Item | Effort |
+| --- | --- |
+| Push notifications ("your story is ready") | small — `expo-notifications` plus a device-token table and a job hook |
+| Sign in with Apple | small — required before iOS submission |
+| Google sign-in in the app | small — `expo-auth-session` |
+| Remix, rename and delete in the app | small — the endpoints exist |
+| Story PDF export to the share sheet | small — the endpoint exists |
+| Localised interface (az/ru/tr) | medium — the four dictionaries exist on the web and can be lifted |
 
 ## What is already handled
 
@@ -234,7 +283,8 @@ review is slower and rejections are more expensive.
 | Launcher shortcuts (New story, My library) | done |
 | Safe-area padding for the reader's fixed controls | done |
 | Play Store `.aab` | needs your package name and keystore |
-| App Store build | needs the native shell above |
+| Native app for both stores | built in `mobile/` — needs an Apple account and an EAS project id |
+| Push notifications, Sign in with Apple | not yet |
 
 ## Costs
 

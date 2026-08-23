@@ -19,6 +19,8 @@ const eslintConfig = [
       'src/types/database.ts',
       // Service worker: runs in a worker global scope, not the app's.
       'public/sw.js',
+      // The native app is a separate project with its own toolchain.
+      'mobile/**',
     ],
   },
   {
