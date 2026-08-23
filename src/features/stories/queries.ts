@@ -11,7 +11,8 @@ import type {
   ReaderPage,
   ReaderStory,
 } from '@/types/domain';
-import type { Json } from '@/types/database';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database, Json } from '@/types/database';
 
 /**
  * Story reads for the library and the reader.
@@ -24,13 +25,15 @@ import type { Json } from '@/types/database';
 export async function listLibrary(ownerId: string): Promise<LibraryCard[]> {
   const supabase = await supabaseServer();
 
-  const { data, error } = await supabase
+  // Deliberately no embedded resources. `stories` has two relationships to
+  // `story_illustrations` (the cover pointer and the story back-reference),
+  // which makes an embed ambiguous and forces a fragile foreign-key hint.
+  // Four small indexed queries are easier to reason about and cannot break
+  // on a constraint rename.
+  const { data: rows, error } = await supabase
     .from('stories')
     .select(
-      `id, title, subtitle, status, language_code, theme_slug, is_favourite, created_at,
-       child_snapshot, current_version_id,
-       cover:story_illustrations!stories_cover_illustration_fk ( storage_path, status ),
-       share_links ( id, is_enabled, revoked_at )`,
+      'id, title, subtitle, status, language_code, theme_slug, is_favourite, created_at, child_snapshot, current_version_id, cover_illustration_id',
     )
     .eq('owner_id', ownerId)
     .is('deleted_at', null)
@@ -38,19 +41,23 @@ export async function listLibrary(ownerId: string): Promise<LibraryCard[]> {
     .limit(120);
 
   if (error) throw errors.notFound('Library');
+  if (rows.length === 0) return [];
 
-  const versionIds = data.map((row) => row.current_version_id).filter((id): id is string => Boolean(id));
-  const [pageCounts, narrated] = await Promise.all([
+  const storyIds = rows.map((row) => row.id);
+  const versionIds = rows.map((row) => row.current_version_id).filter((id): id is string => Boolean(id));
+  const coverIds = rows.map((row) => row.cover_illustration_id).filter((id): id is string => Boolean(id));
+
+  const [pageCounts, narrated, covers, sharedStoryIds] = await Promise.all([
     countPagesByVersion(versionIds),
     narratedVersions(versionIds),
+    coverPathsById(coverIds),
+    sharedStories(supabase, ownerId, storyIds),
   ]);
 
-  const coverPaths = data.map((row) => coverPathOf(row.cover));
-  const signed = await storage.signedUrls(STORAGE_BUCKETS.illustrations, coverPaths);
+  const signed = await storage.signedUrls(STORAGE_BUCKETS.illustrations, [...covers.values()]);
 
-  return data.map((row) => {
-    const coverPath = coverPathOf(row.cover);
-    const shares = normaliseShareLinks(row.share_links);
+  return rows.map((row) => {
+    const coverPath = row.cover_illustration_id ? covers.get(row.cover_illustration_id) : undefined;
 
     return {
       id: row.id,
@@ -65,7 +72,7 @@ export async function listLibrary(ownerId: string): Promise<LibraryCard[]> {
       coverUrl: coverPath ? (signed.get(coverPath) ?? null) : null,
       pageCount: row.current_version_id ? (pageCounts.get(row.current_version_id) ?? 0) : 0,
       hasNarration: row.current_version_id ? narrated.has(row.current_version_id) : false,
-      isShared: shares.some((link) => link.is_enabled && !link.revoked_at),
+      isShared: sharedStoryIds.has(row.id),
     };
   });
 }
@@ -287,20 +294,41 @@ async function narratedVersions(versionIds: string[]): Promise<Set<string>> {
   return set;
 }
 
-function coverPathOf(cover: unknown): string | null {
-  if (!cover) return null;
-  const row = Array.isArray(cover) ? cover[0] : cover;
-  if (!row || typeof row !== 'object') return null;
-  const record = row as { storage_path?: string | null; status?: string | null };
-  return record.status === 'ready' ? (record.storage_path ?? null) : null;
+/** Storage paths for the covers that are actually ready to display. */
+async function coverPathsById(illustrationIds: string[]): Promise<Map<string, string>> {
+  const paths = new Map<string, string>();
+  if (illustrationIds.length === 0) return paths;
+
+  const { data } = await supabaseAdmin()
+    .from('story_illustrations')
+    .select('id, storage_path, status')
+    .in('id', illustrationIds);
+
+  for (const row of data ?? []) {
+    if (row.status === 'ready' && row.storage_path) paths.set(row.id, row.storage_path);
+  }
+  return paths;
 }
 
-function normaliseShareLinks(value: unknown): Array<{ is_enabled: boolean; revoked_at: string | null }> {
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (row): row is { is_enabled: boolean; revoked_at: string | null } =>
-      typeof row === 'object' && row !== null && 'is_enabled' in row,
-  );
+/** The subset of these stories that currently has a live share link. */
+async function sharedStories(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+  storyIds: string[],
+): Promise<Set<string>> {
+  const shared = new Set<string>();
+  if (storyIds.length === 0) return shared;
+
+  const { data } = await supabase
+    .from('share_links')
+    .select('story_id')
+    .eq('owner_id', ownerId)
+    .eq('is_enabled', true)
+    .is('revoked_at', null)
+    .in('story_id', storyIds);
+
+  for (const row of data ?? []) shared.add(row.story_id);
+  return shared;
 }
 
 export function displayNameOf(snapshot: Json | null): string | null {
