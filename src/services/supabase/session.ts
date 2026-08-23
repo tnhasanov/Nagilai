@@ -10,8 +10,23 @@ import type { Database } from '@/types/database';
  * boundary: RLS in the database is. A request that slips past this still
  * cannot read another family's data.
  */
-const PRIVATE_PREFIXES = ['/dashboard', '/children', '/create', '/library', '/settings', '/admin'];
-const AUTH_PREFIXES = ['/login', '/signup', '/forgot-password'];
+/**
+ * Exported so `tests/proxy.test.ts` can check that `src/proxy.ts`'s
+ * matcher covers every one of them. Next requires that matcher to be a
+ * static literal, so the two lists cannot be derived from each other — and
+ * a prefix added here but forgotten there is a redirect that silently
+ * stops happening.
+ */
+export const PRIVATE_PREFIXES = [
+  '/dashboard',
+  '/children',
+  '/create',
+  '/library',
+  '/settings',
+  '/admin',
+] as const;
+
+export const AUTH_PREFIXES = ['/login', '/signup', '/forgot-password'] as const;
 
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   let response = NextResponse.next({ request });
