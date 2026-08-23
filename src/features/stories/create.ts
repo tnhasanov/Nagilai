@@ -47,13 +47,14 @@ export async function createStory(params: CreateStoryParams): Promise<{ storyId:
 
   await enforce('story_create', params.ownerId);
 
-  const [child, theme, language, style, objective, features] = await Promise.all([
+  const [child, theme, language, style, objective, features, limits] = await Promise.all([
     loadChild(params.ownerId, params.childId),
     loadTheme(params.themeSlug),
     loadLanguage(params.languageCode),
     params.illustrationStyleSlug ? loadStyle(params.illustrationStyleSlug) : Promise.resolve(null),
     params.objectiveSlug ? loadObjective(params.objectiveSlug) : Promise.resolve(null),
     getSetting('features'),
+    getSetting('generation_limits'),
   ]);
 
   if (params.customInstructions) {
@@ -67,11 +68,27 @@ export async function createStory(params: CreateStoryParams): Promise<{ storyId:
 
   // Check affordability before writing anything, so a parent out of
   // credits gets a clear message instead of a story stuck in `queued`.
+  //
+  // The estimate covers the *whole* book, not just its first job.
+  // Illustrations are charged per image and a story fans out to one image
+  // per page plus a cover, so checking only the text cost would let a
+  // parent start a book that runs out of credits partway through -- and
+  // `insufficient_credits` is not retryable, so those images would
+  // dead-letter rather than wait.
   const illustrationsWanted = features.illustrations_enabled && style !== null;
-  const textCost = await credits.costOf('story_text');
-  const balance = await credits.getBalance(params.ownerId);
-  if (balance < textCost) {
-    throw errors.insufficientCredits(textCost, balance);
+  const [textCost, illustrationCost, balance] = await Promise.all([
+    credits.costOf('story_text'),
+    credits.costOf('story_illustration'),
+    credits.getBalance(params.ownerId),
+  ]);
+  const estimate = credits.estimateStoryCost({
+    pages: limits[params.length].pages,
+    illustrated: illustrationsWanted,
+    textCost,
+    illustrationCost,
+  });
+  if (balance < estimate.total) {
+    throw errors.insufficientCredits(estimate.total, balance);
   }
 
   const snapshot = redactChild(child);

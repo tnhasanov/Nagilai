@@ -17,10 +17,18 @@ Digital book → Listen → Library → PDF → Share
 
 ## Status
 
-**Phase 1 (functional MVP) is implemented.** Authentication, child profiles,
-multilingual story generation, AI illustrations, narration, the digital book
-reader, PDF export, controlled sharing, the admin area and usage/cost
-tracking are all in place.
+**Phase 1 (functional MVP) is written, and nothing is deployed yet.**
+Authentication, child profiles, multilingual story generation, AI
+illustrations, narration, the digital book reader, PDF export, controlled
+sharing, the admin area and usage/cost tracking are all implemented. There
+is a native iOS and Android app in [`mobile/`](mobile) against the same
+backend.
+
+What that does **not** mean: none of it has run against a real Supabase
+project or a real OpenAI key. The build, the tests, the migrations and their
+SQL assertions all pass; the live path is unproven. The distinction, drawn
+component by component, is in [`CURRENT_STATE.md`](CURRENT_STATE.md), and the
+route out of it is in [`docs/LAUNCH-READINESS.md`](docs/LAUNCH-READINESS.md).
 
 Phase 2 (monetisation) and Phase 3 (physical books) have their schema,
 service interfaces and admin configuration in place but are switched off by
@@ -32,22 +40,25 @@ feature flag. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 | Document | What it covers |
 | --- | --- |
+| [**Current state**](CURRENT_STATE.md) | What is verified working, what is untested, what is a placeholder, and the prioritized gap list |
+| [**Launch readiness**](docs/LAUNCH-READINESS.md) | The exact credentials needed to deploy, and what happens once they exist |
 | [Architecture](docs/ARCHITECTURE.md) | System shape, service boundaries, the generation pipeline |
 | [Database](docs/DATABASE.md) | Schema, relationships, row level security |
 | [User journeys](docs/USER-JOURNEYS.md) | The flows the product is built around |
 | [Routes](docs/ROUTES.md) | Every page and endpoint, and who may reach it |
 | [Security & privacy](docs/SECURITY-PRIVACY.md) | Children's data, threat model, what is enforced where |
 | [Setup](docs/SETUP.md) | Supabase, OpenAI, Vercel, storage, local development |
-| [Mobile & app stores](docs/MOBILE.md) | Hosting, the Play Store package, and the native app |
+| [Mobile & app stores](docs/MOBILE.md) | Hosting, the native app for both stores, and the optional TWA |
 | [Native app](mobile/README.md) | The Expo app for iOS and Android |
 | [Roadmap](docs/ROADMAP.md) | Phase 1–4 and what is deliberately deferred |
 | [Decisions](docs/DECISIONS.md) | Architectural decisions, assumptions made, **and the calls that need the owner** |
 | [Bubble migration](docs/BUBBLE-MIGRATION.md) | Mapping from the retired prototype |
 
-**Start with [`docs/DECISIONS.md`](docs/DECISIONS.md)** — it lists the
-business decisions that were assumed in order to make progress and which
-need a real answer before launch (pricing, printing partner, children's
-privacy posture, paid AI budget).
+**Start with [`CURRENT_STATE.md`](CURRENT_STATE.md)** for where the build
+actually is, then [`docs/DECISIONS.md`](docs/DECISIONS.md) for the business
+decisions that were assumed in order to make progress and need a real answer
+before launch (pricing, printing partner, children's privacy posture, paid AI
+budget).
 
 ---
 
@@ -75,13 +86,20 @@ Then open http://localhost:3000.
 
 ```bash
 npm run typecheck   # TypeScript, strict
+npm run lint        # ESLint
 npm test            # unit tests
 npm run build       # production build
-npm run check       # all three
+npm run check       # all four
 
 # Database migrations and their SQL assertions, against a scratch Postgres
-DATABASE_URL=postgres:///nagilai_test ./scripts/verify-migrations.sh
+DATABASE_URL=postgres:///nagilai_test npm run db:verify
+
+# Regenerate src/types/database.ts from a live schema
+DATABASE_URL=postgres://... npm run db:types
 ```
+
+Where things stand right now — verified, not remembered — is in
+[CURRENT_STATE.md](CURRENT_STATE.md).
 
 ---
 

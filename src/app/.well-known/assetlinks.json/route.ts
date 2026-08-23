@@ -3,18 +3,23 @@ import { NextResponse } from 'next/server';
 /**
  * Digital Asset Links (Android app-site association).
  *
- * This is the file Chrome fetches to verify that the Play Store app and
- * this website are the same publisher. Without a matching entry the
- * Trusted Web Activity still runs, but it shows a browser address bar at
- * the top — which is an instant "this is just a website" for a reviewer
- * and for a customer.
+ * This is the file Chrome fetches to verify that a Play Store app and this
+ * website are the same publisher. Without a matching entry a Trusted Web
+ * Activity still runs, but it shows a browser address bar at the top —
+ * which is an instant "this is just a website" for a reviewer and for a
+ * customer.
+ *
+ * This route serves the *optional TWA wrapper* of the website. The Play
+ * Store product is the native app in `mobile/`, which owns
+ * `com.nagilai.app`; a TWA must be published under a different package
+ * name, because Play binds one permanently on first upload.
  *
  * The fingerprint is served from configuration rather than committed,
  * because it comes from the Play Console **after** the first upload
  * (Google re-signs the app), and because a developer may need to list two
  * at once — their local upload key and Google's Play signing key.
  *
- *   ANDROID_PACKAGE_NAME=com.nagilai.app
+ *   ANDROID_PACKAGE_NAME=com.nagilai.twa
  *   ANDROID_CERT_FINGERPRINTS=AA:BB:...,CC:DD:...
  *
  * Setting them is a redeploy, not a code change. See docs/MOBILE.md.

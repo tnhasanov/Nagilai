@@ -81,6 +81,46 @@ parsing anything, and records each event under a unique index on the Stripe
 event id — so a redelivery updates a row rather than granting a second month
 of credits.
 
+## `/api/v1` — the native app's API
+
+The Expo app in `mobile/` talks to these. They are **thin wrappers** over
+`src/features/stories/operations.ts` and the same feature layer the website's
+server actions use — the same ownership checks, the same rate limits, the
+same charging. No business logic is reimplemented for mobile, and the app
+never decides what a parent may do or what it costs.
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/v1/me` | GET | Profile, credit balance, feature flags |
+| `/api/v1/catalogue` | GET | Languages, themes, objectives, styles, voices for a locale |
+| `/api/v1/children` | GET, POST | List and create child profiles |
+| `/api/v1/children/[childId]` | GET, PATCH, DELETE | Read; update; archive |
+| `/api/v1/stories` | GET, POST | Library; start a story |
+| `/api/v1/stories/[storyId]` | GET, PATCH, DELETE | Read; rename or favourite; delete |
+| `/api/v1/stories/[storyId]/progress` | GET | Generation progress poll |
+| `/api/v1/stories/[storyId]/narration` | POST | Queue narration |
+| `/api/v1/stories/[storyId]/pdf` | POST | Build or fetch a PDF |
+| `/api/v1/stories/[storyId]/share` | GET, POST, DELETE | Read, create/update, revoke a share link |
+| `/api/v1/stories/[storyId]/remix` | POST | Remix into a new story |
+| `/api/v1/stories/[storyId]/retry` | POST | Retry a failed story |
+| `.../illustrations/[illustrationId]/retry` | POST | Retry one failed image |
+
+Every route also answers `OPTIONS` for the CORS preflight.
+
+Authentication is a **bearer token**, not a cookie: `Authorization: Bearer
+<supabase access token>`. The token is verified *with Supabase on every
+request* rather than decoded locally, so a revoked session or a deleted
+account stops working immediately rather than at the next expiry.
+
+Because auth is a bearer token and never an ambient cookie, CORS can be
+permissive without opening a cross-site request forgery hole — a hostile page
+cannot make a browser attach a token it does not have.
+
+Every handler runs through `src/services/api/handler.ts`, which turns a Zod
+failure into a field-keyed error map, an `AppError` into its own status code
+(`402` for insufficient credits, `429` for a rate limit), and anything else
+into a `500` that reveals nothing.
+
 ## Server actions
 
 Most mutations are server actions rather than endpoints, so no HTTP surface

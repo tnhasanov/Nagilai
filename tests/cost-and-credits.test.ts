@@ -3,6 +3,7 @@ import { computeCost, type PricingTable } from '@/services/usage/tracker';
 import { ManualPrintProvider } from '@/services/printing/manual';
 import { formatMicroUsd, formatMoney } from '@/lib/utils';
 import { stableHash, generateShareToken, safeEqual } from '@/lib/crypto';
+import { estimateStoryCost } from '@/services/credits';
 
 /**
  * Cost tracking and order arithmetic (§17, §34).
@@ -237,5 +238,58 @@ describe('hashing and tokens', () => {
     expect(safeEqual('abc', 'abd')).toBe(false);
     expect(safeEqual('abc', 'much longer value')).toBe(false);
     expect(safeEqual('', '')).toBe(true);
+  });
+});
+
+describe('what a whole story costs before it starts', () => {
+  /**
+   * The bug this guards against: illustrations are charged per image, and
+   * a story fans out to one image per page plus a cover. Pre-checking only
+   * the text cost lets a parent start a book that dies partway through,
+   * because `insufficient_credits` is not retryable and the remaining
+   * images dead-letter instead of waiting.
+   */
+  it('counts one image per page plus the cover', () => {
+    const estimate = estimateStoryCost({
+      pages: 10,
+      illustrated: true,
+      textCost: 1,
+      illustrationCost: 1,
+    });
+
+    expect(estimate.imageCount).toBe(11);
+    expect(estimate.illustrations).toBe(11);
+    expect(estimate.total).toBe(12);
+  });
+
+  it('charges for text alone when the book is not illustrated', () => {
+    const estimate = estimateStoryCost({
+      pages: 10,
+      illustrated: false,
+      textCost: 1,
+      illustrationCost: 1,
+    });
+
+    expect(estimate.imageCount).toBe(0);
+    expect(estimate.total).toBe(1);
+  });
+
+  it('respects a per-image cost above one credit', () => {
+    const estimate = estimateStoryCost({
+      pages: 6,
+      illustrated: true,
+      textCost: 2,
+      illustrationCost: 3,
+    });
+
+    // 7 images x 3, plus 2 for the text
+    expect(estimate.total).toBe(23);
+  });
+
+  it('costs more for a longer book, which is the whole point of checking', () => {
+    const short = estimateStoryCost({ pages: 6, illustrated: true, textCost: 1, illustrationCost: 1 });
+    const long = estimateStoryCost({ pages: 16, illustrated: true, textCost: 1, illustrationCost: 1 });
+
+    expect(long.total).toBeGreaterThan(short.total);
   });
 });
