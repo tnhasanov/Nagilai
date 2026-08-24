@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { retryStoryAction } from '@/features/stories/actions';
 import { GENERATION_POLL_INTERVAL_MS, GENERATION_POLL_TIMEOUT_MS } from '@/config/constants';
 import { cn } from '@/lib/utils';
+import { HeroBook } from '@/components/marketing/hero-book';
 import type { Dictionary } from '@/i18n';
 
 interface Progress {
@@ -142,8 +143,23 @@ export function GenerationProgress({
   if (progress.status === 'ready') {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-pill bg-sage-soft text-sage">
-          <Check className="size-6" />
+        <div className="relative mx-auto mb-5 w-fit animate-pop">
+          <div className="flex size-14 items-center justify-center rounded-pill bg-sage-soft text-sage">
+            <Check className="size-6" />
+          </div>
+          {/* A quiet celebration: three sparkles swaying around the tick,
+              staggered so they read as drifting rather than blinking. */}
+          <Sparkles className="absolute -left-7 -top-2 size-4 animate-sway text-amber" aria-hidden="true" />
+          <Sparkles
+            className="absolute -right-8 top-1 size-5 animate-sway text-plum"
+            style={{ animationDelay: '1.2s' }}
+            aria-hidden="true"
+          />
+          <Sparkles
+            className="absolute -bottom-3 -right-4 size-3.5 animate-sway text-rose"
+            style={{ animationDelay: '2.4s' }}
+            aria-hidden="true"
+          />
         </div>
         <h1 className="font-display text-2xl font-bold text-ink">{strings.ready}</h1>
         <Button className="mt-7" onClick={() => router.refresh()}>
@@ -156,11 +172,12 @@ export function GenerationProgress({
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center sm:py-24">
-      <div
-        className="mx-auto mb-7 flex size-16 items-center justify-center rounded-pill bg-amber-soft text-amber-deep"
-        aria-hidden="true"
-      >
-        <Sparkles className="size-7 animate-drift" />
+      {/* The book being made, not a sparkle in a circle. This is the
+          longest wait in the product and the moment of most anticipation;
+          it should look like the thing that is coming. The illustration
+          animates itself — twinkling stars, drifting sparkles. */}
+      <div className="mx-auto mb-4 w-64 animate-rise sm:w-80" aria-hidden="true">
+        <HeroBook />
       </div>
 
       <h1 className="font-display text-2xl font-bold text-ink">{strings.title}</h1>
@@ -192,7 +209,7 @@ export function GenerationProgress({
                     : 'border-line text-ink-faint',
               )}
             >
-              {step.done ? <Check className="size-3.5" /> : step.active ? <Spinner className="size-3.5" /> : null}
+              {step.done ? <Check className="size-3.5 animate-pop" /> : step.active ? <Spinner className="size-3.5" /> : null}
             </span>
             <span className={cn('text-sm', step.done || step.active ? 'font-semibold text-ink' : 'text-ink-faint')}>
               {step.label}

@@ -80,8 +80,14 @@ export function LibraryGrid({
         />
       ) : (
         <ul className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-          {visible.map((story) => (
-            <StoryCard key={story.id} story={story} strings={strings} commonStrings={commonStrings} />
+          {visible.map((story, index) => (
+            <StoryCard
+              key={story.id}
+              story={story}
+              index={index}
+              strings={strings}
+              commonStrings={commonStrings}
+            />
           ))}
         </ul>
       )}
@@ -91,10 +97,13 @@ export function LibraryGrid({
 
 function StoryCard({
   story,
+  index,
   strings,
   commonStrings,
 }: {
   story: LibraryCard;
+  /** Position in the grid, for the staggered entrance. */
+  index: number;
   strings: Dictionary['library'];
   commonStrings: Dictionary['common'];
 }) {
@@ -105,7 +114,9 @@ function StoryCard({
   const href = story.status === 'ready' ? `/library/${story.id}` : `/library/${story.id}?progress=1`;
 
   return (
-    <li className="group relative">
+    // Each book arrives a beat after the one before, like being set on a
+    // shelf. Capped so a big library does not keep arriving.
+    <li className="group relative animate-rise" style={{ animationDelay: `${Math.min(index * 45, 360)}ms` }}>
       <Link
         href={href}
         className="block overflow-hidden rounded-card border border-line bg-paper-raised shadow-page transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"

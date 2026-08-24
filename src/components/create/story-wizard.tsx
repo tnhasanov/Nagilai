@@ -262,7 +262,7 @@ export function StoryWizard({
                 )}
                 aria-current={position === step ? 'step' : undefined}
               >
-                {position < step ? <Check className="size-4" /> : position + 1}
+                {position < step ? <Check className="size-4 animate-pop" /> : position + 1}
               </button>
               <span
                 className={cn(
@@ -315,7 +315,7 @@ export function StoryWizard({
                         }
                       }}
                       className={cn(
-                        'flex w-full items-center gap-4 rounded-card border p-4 text-left transition-all',
+                        'flex w-full items-center gap-4 rounded-card border p-4 text-left transition-all active:scale-[0.98]',
                         selected
                           ? 'border-amber bg-amber-soft shadow-page'
                           : 'border-line bg-paper-raised hover:border-line-strong',
@@ -385,7 +385,7 @@ export function StoryWizard({
                         type="button"
                         onClick={() => setThemeSlug(theme.slug)}
                         className={cn(
-                          'relative w-full overflow-hidden rounded-tile border px-3.5 py-3 text-left text-sm font-semibold transition-all',
+                          'relative w-full overflow-hidden rounded-tile border px-3.5 py-3 text-left text-sm font-semibold transition-all active:scale-[0.97]',
                           selected
                             ? 'border-amber bg-amber-soft text-amber-deep shadow-page'
                             : 'border-line bg-paper-raised text-ink hover:border-line-strong',
@@ -394,10 +394,12 @@ export function StoryWizard({
                         {/* The icon is in the database and was being
                             fetched and thrown away, leaving sixteen tiles
                             distinguishable only by a 10px dot. */}
-                        <ThemeGlyph
-                          name={theme.icon}
-                          colour={theme.accentColor ?? 'var(--color-amber)'}
-                        />
+                        <span className={cn('block w-fit', selected && 'animate-pop')}>
+                          <ThemeGlyph
+                            name={theme.icon}
+                            colour={theme.accentColor ?? 'var(--color-amber)'}
+                          />
+                        </span>
                         {theme.label}
                         {theme.isPremium ? (
                           <Badge tone="plum" className="absolute right-2 top-2">
@@ -506,7 +508,7 @@ export function StoryWizard({
                     type="button"
                     onClick={() => setLength(value)}
                     className={cn(
-                      'rounded-tile border px-3 py-3.5 text-center transition-all',
+                      'rounded-tile border px-3 py-3.5 text-center transition-all active:scale-[0.97]',
                       length === value
                         ? 'border-amber bg-amber-soft shadow-page'
                         : 'border-line bg-paper-raised hover:border-line-strong',
@@ -611,8 +613,8 @@ export function StoryWizard({
               <ArrowRight />
             </Button>
           ) : (
-            <Button size="lg" onClick={submit} disabled={pending || !canAfford}>
-              {pending ? <Spinner /> : <Sparkles />}
+            <Button size="lg" onClick={submit} disabled={pending || !canAfford} className="group">
+              {pending ? <Spinner /> : <Sparkles className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />}
               {pending ? strings.create.submitting : strings.create.submit}
             </Button>
           )}
@@ -835,9 +837,9 @@ function StylePill({
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded-pill border px-4 py-2.5 text-sm font-semibold transition-all',
+        'inline-flex items-center gap-2 rounded-pill border px-4 py-2.5 text-sm font-semibold transition-all active:scale-95',
         selected
-          ? 'border-amber bg-amber-soft text-amber-deep'
+          ? 'animate-pop border-amber bg-amber-soft text-amber-deep'
           : 'border-line bg-paper-raised text-ink hover:border-line-strong',
       )}
     >

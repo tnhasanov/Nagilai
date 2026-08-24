@@ -43,6 +43,13 @@ export function HeroBook({ className }: { className?: string }) {
         <filter id="bookShadow" x="-20%" y="-20%" width="140%" height="150%">
           <feDropShadow dx="0" dy="18" stdDeviation="22" floodColor="#4A3220" floodOpacity="0.28" />
         </filter>
+        <linearGradient id="spineFold" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#F3E9D9" />
+          <stop offset="28%" stopColor="#DCCDB2" />
+          <stop offset="50%" stopColor="#B49A78" />
+          <stop offset="72%" stopColor="#DCCDB2" />
+          <stop offset="100%" stopColor="#F3E9D9" />
+        </linearGradient>
         <clipPath id="leftPageClip">
           <path d="M56 96c74-26 148-26 214 10v268c-66-36-140-36-214-10V96Z" />
         </clipPath>
@@ -141,9 +148,12 @@ export function HeroBook({ className }: { className?: string }) {
         </g>
         <path d="M398 118h84" stroke="#D97E28" strokeWidth="7" strokeLinecap="round" />
 
-        {/* The spine: two soft gradients meeting at the fold. */}
-        <path d="M270 106c16 6 34 6 50 0v268c-16 6-34 6-50 0V106Z" fill="#EADFCB" opacity="0.85" />
-        <path d="M320 106c16 6 34 6 50 0v268c-16 6-34 6-50 0V106Z" fill="#E2D5BE" opacity="0.6" />
+        {/* The fold: one shape darkening into the gutter, so it reads
+            as paper creasing rather than a pale band down the middle. */}
+        <path
+          d="M270 106c16 6 34 6 50 0 16-6 34-6 50 0v268c-16 6-34 6-50 0-16-6-34-6-50 0V106Z"
+          fill="url(#spineFold)"
+        />
       </g>
 
       {/* Loose sparkles drifting above the book. */}
@@ -158,7 +168,7 @@ export function HeroBook({ className }: { className?: string }) {
           style={{ animationDelay: '3s' }}
         />
         <path
-          d="M596 300c.9 4.4 2 5.5 6.4 6.4-4.4.9-5.5 2-6.4 6.4-.9-4.4-2-5.5-6.4-6.4 4.4-.9 5.5-2 6.4-6.4Z"
+          d="M626 250c.9 4.4 2 5.5 6.4 6.4-4.4.9-5.5 2-6.4 6.4-.9-4.4-2-5.5-6.4-6.4 4.4-.9 5.5-2 6.4-6.4Z"
           className="animate-drift"
           style={{ animationDelay: '6s' }}
         />

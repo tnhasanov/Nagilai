@@ -240,7 +240,7 @@ export function ChildForm({
                 onClick={() => setAvatarColor(colour.value)}
                 aria-label={strings.children[colour.key]}
                 aria-pressed={avatarColor === colour.value}
-                className="size-11 rounded-pill border-2 transition-transform hover:scale-110"
+                className="size-11 rounded-pill border-2 transition-transform hover:scale-110 active:scale-95"
                 style={{
                   background: colour.value,
                   borderColor: avatarColor === colour.value ? 'var(--color-ink)' : 'transparent',
@@ -562,9 +562,9 @@ function Chip({
            button.tsx. An earlier version of this comment claimed py-1.5
            got there on its own; it does not — that is 38px. `py-2` still
            matters for a long label that wraps at 375px. */
-        'inline-flex min-h-11 items-center rounded-pill border px-3.5 py-2 text-sm transition-all',
+        'inline-flex min-h-11 items-center rounded-pill border px-3.5 py-2 text-sm transition-all active:scale-95',
         selected
-          ? 'border-amber bg-amber-soft font-semibold text-amber-deep'
+          ? 'animate-pop border-amber bg-amber-soft font-semibold text-amber-deep'
           : 'border-line bg-paper-sunken text-ink-soft hover:border-line-strong hover:text-ink',
         disabled ? 'cursor-not-allowed opacity-40' : null,
       )}

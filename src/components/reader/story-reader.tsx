@@ -11,6 +11,7 @@ import {
   Minimize2,
   RefreshCw,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 import { NarrationPlayer } from './narration-player';
 import { Button } from '@/components/ui/button';
@@ -419,7 +420,21 @@ function ClosingSpread({
 }) {
   return (
     <article className="mx-auto max-w-2xl overflow-hidden rounded-card border border-line bg-paper-raised px-6 py-14 text-center shadow-book sm:px-12">
-      <h2 className="font-display text-3xl font-bold text-ink sm:text-4xl">{strings.theEnd}</h2>
+      {/* The last page of a bedtime book deserves a sky. Two stars
+          twinkling beside the words, on offsets so they breathe rather
+          than blink together. */}
+      <div className="relative mx-auto w-fit">
+        <h2 className="font-display text-3xl font-bold text-ink sm:text-4xl">{strings.theEnd}</h2>
+        <Sparkles
+          className="absolute -left-9 top-0 size-4 animate-twinkle text-amber"
+          aria-hidden="true"
+        />
+        <Sparkles
+          className="absolute -right-9 bottom-0 size-3.5 animate-twinkle text-plum"
+          style={{ animationDelay: '1.6s' }}
+          aria-hidden="true"
+        />
+      </div>
       <div className="mx-auto mt-5 h-px w-14 bg-amber" aria-hidden="true" />
 
       {story.educationalTakeaway || story.discussionQuestions.length > 0 ? (
