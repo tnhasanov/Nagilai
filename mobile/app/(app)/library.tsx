@@ -56,7 +56,10 @@ export default function Library() {
       const downloaded = await listOffline();
       setOffline(downloaded);
       setStories((current) => current ?? []);
-      setError(caught instanceof Error ? caught.message : t('library.loadFailed'));
+      /* Localised, always. `caught.message` is whatever English the API
+         or fetch stack produced, shown verbatim inside a translated
+         screen. */
+      setError(t('library.loadFailed'));
     }
   }, [api, t]);
 
@@ -76,12 +79,39 @@ export default function Library() {
 
   const downloadedIds = new Set(offline.map((entry) => entry.storyId));
 
+  /*
+   * Offline with saved books, the saved books ARE the library. They were
+   * downloaded precisely for this moment, and used to be advertised in a
+   * non-tappable banner under an empty state that said "make your first
+   * story" — while three finished books sat unreachable on the disk.
+   * Gated on the fetch actually having failed, so stale downloads never
+   * shadow a genuinely empty library.
+   */
+  const showingOffline = error !== null && stories.length === 0 && offline.length > 0;
+  const cards: LibraryCard[] = showingOffline
+    ? offline.map((entry) => ({
+        id: entry.storyId,
+        title: entry.title,
+        subtitle: null,
+        status: 'ready',
+        languageCode: '',
+        themeSlug: '',
+        childDisplayName: null,
+        isFavourite: false,
+        createdAt: entry.downloadedAt,
+        coverUrl: entry.coverUri,
+        pageCount: 0,
+        hasNarration: false,
+        isShared: false,
+      }))
+    : stories;
+
   return (
     <Screen edges={[]}>
       {!online ? <Banner message={t('common.noConnection')} tone="warning" /> : null}
 
       <FlatList
-        data={stories}
+        data={cards}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={{ gap: spacing.md }}
@@ -97,20 +127,32 @@ export default function Library() {
             }}
           />
         }
-        ListHeaderComponent={error ? <ErrorNotice message={error} /> : null}
+        ListHeaderComponent={
+          error ? (
+            <View style={{ gap: spacing.sm }}>
+              <ErrorNotice message={error} />
+              <Button variant="secondary" label={t('common.retry')} onPress={() => void load()} />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          <EmptyState
+          /* Never both: "we could not load your library" directly above
+             "your library is waiting — create your first story" is two
+             contradictions and one broken Create button. */
+          error ? null : (
+            <EmptyState
             title={t('library.emptyTitle')}
             description={t('library.emptyDescription')}
             action={
               <Button label={t('library.createFirst')} onPress={() => router.push('/(app)/create')} />
-            }
-          />
+              }
+            />
+          )
         }
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/story/${item.id}`)}
-            style={{ flex: 1, gap: spacing.sm }}
+            style={{ flex: 1, maxWidth: '50%', gap: spacing.sm }}
             accessibilityRole="button"
             accessibilityLabel={item.title}
           >
@@ -137,7 +179,7 @@ export default function Library() {
                 </View>
               )}
 
-              {item.status !== 'ready' && item.status !== 'failed' ? (
+              {item.status !== 'ready' ? (
                 <View
                   style={{
                     position: 'absolute',
@@ -149,7 +191,9 @@ export default function Library() {
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={[type.caption, { color: '#fff' }]}>{t('library.beingMade')}</Text>
+                  <Text style={[type.caption, { color: '#fff' }]}>
+                    {item.status === 'failed' ? t('library.failed') : t('library.beingMade')}
+                  </Text>
                 </View>
               ) : null}
 
@@ -187,16 +231,7 @@ export default function Library() {
         )}
       />
 
-      {offline.length > 0 && stories.length === 0 ? (
-        <Banner
-          message={t('library.savedOnDevice', {
-            count:
-              offline.length === 1
-                ? t('settings.bookCountOne')
-                : t('settings.bookCount', { count: offline.length }),
-          })}
-        />
-      ) : null}
+
     </Screen>
   );
 }

@@ -98,6 +98,26 @@ export async function requestNarration(
   const speed = clampSpeed(input.speed ?? 1);
   const voiceSlug = input.voiceSlug ?? null;
 
+  /*
+   * The stable key protects against a double tap; it must not protect a
+   * dead job. `enqueue` upserts with `ignoreDuplicates`, so once a
+   * narration job has failed its key sits in the table forever and every
+   * later request with the same voice and speed was silently dropped —
+   * the retry button queued nothing. A failed previous attempt gets a
+   * discriminator, the same shape `retryStory` uses; a clean first
+   * request keeps the stable key and its double-tap protection.
+   */
+  const { data: previous } = await supabaseAdmin()
+    .from('narrations')
+    .select('status')
+    .eq('version_id', story.current_version_id)
+    .eq('scope', 'full_story')
+    .eq('speed', speed)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const retrying = previous?.status === 'failed';
+
   await enqueue({
     type: 'story_narration',
     ownerId,
@@ -105,9 +125,9 @@ export async function requestNarration(
     versionId: story.current_version_id,
     priority: 20,
     payload: { voiceSlug, speed },
-    // Same story, voice and speed => the same job, so a double tap does
-    // not queue two syntheses.
-    idempotencyKey: `narration:${story.current_version_id}:${voiceSlug ?? 'default'}:${speed}`,
+    idempotencyKey: retrying
+      ? `narration:${story.current_version_id}:${voiceSlug ?? 'default'}:${speed}:retry:${Date.now()}`
+      : `narration:${story.current_version_id}:${voiceSlug ?? 'default'}:${speed}`,
   });
 
   kickWorker();

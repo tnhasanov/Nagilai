@@ -11,10 +11,11 @@ import {
   Caption,
   Card,
   Chip,
+  ErrorNotice,
   Heading,
   Screen,
-  ToggleRow,
   spacing,
+  ToggleRow,
   type,
   usePalette,
 } from '../../src/components/ui';
@@ -33,7 +34,7 @@ import {
  * storytelling app to change the stories.
  */
 export default function Settings() {
-  const { profile, notifications, api, signOut, setNotifications } = useSession();
+  const { profile, notifications, api, signOut, setNotifications, refreshProfile } = useSession();
   const palette = usePalette();
   const { t, locale, setLocale } = useI18n();
 
@@ -41,6 +42,7 @@ export default function Settings() {
   const [recovered, setRecovered] = useState<number>(0);
   const [permission, setPermission] = useState<PermissionState>('undetermined');
   const [busy, setBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     // Reconcile first: the index is a claim, the filesystem is the truth,
@@ -63,28 +65,34 @@ export default function Settings() {
    */
   async function chooseLocale(next: Locale) {
     await setLocale(next);
-    if (profile) {
-      void api
-        .updateProfile({
-          uiLocale: next,
-          displayName: profile.displayName ?? '',
-          marketingOptIn: false,
-        })
-        .catch(() => undefined);
-    }
+    /* Only the locale. This call used to send `marketingOptIn: false`
+       and a possibly stale display name with every language change —
+       silently withdrawing a consent the parent had given on the
+       website, with no cue that switching languages touched anything
+       else. PATCH sends what changed and nothing more. */
+    void api.updateProfile({ uiLocale: next }).catch(() => undefined);
   }
 
   const pushAvailable = notifications?.available ?? false;
 
   async function enablePush() {
     setBusy(true);
+    setPushError(null);
     try {
       const result = await registerForPush(api, locale);
       setPermission(await permissionState());
       if (result.status === 'registered') {
         const { notifications: next } = await api.devices.get();
         setNotifications(next);
+      } else if (result.status === 'not-configured' || result.status === 'unsupported') {
+        setPushError(t('settings.notificationsUnavailable'));
+      } else if (result.status !== 'denied') {
+        /* 'denied' needs no message: the permission refresh above flips
+           the card to its open-phone-settings branch. */
+        setPushError(t('common.noConnection'));
       }
+    } catch {
+      setPushError(t('common.noConnection'));
     } finally {
       setBusy(false);
     }
@@ -93,13 +101,20 @@ export default function Settings() {
   async function updatePreference(patch: { pushEnabled?: boolean; storyReady?: boolean }) {
     // Optimistic: a switch that waits for a round trip before moving feels
     // broken on a slow connection.
+    const previous = notifications;
     if (notifications) setNotifications({ ...notifications, ...patch });
     try {
       const { notifications: next } = await api.devices.preferences(patch);
       setNotifications(next);
+      setPushError(null);
     } catch {
+      /* The switch used to spring back with no explanation — or, when
+         the re-fetch also failed, stay showing a state that was never
+         saved. */
+      setPushError(t('common.noConnection'));
       const { notifications: next } = await api.devices.get().catch(() => ({ notifications: null }));
       if (next) setNotifications(next);
+      else if (previous) setNotifications(previous);
     }
   }
 
@@ -108,7 +123,20 @@ export default function Settings() {
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs }}>
           <Caption>{t('settings.signedInAs')}</Caption>
-          <Heading>{profile?.displayName ?? profile?.email ?? '—'}</Heading>
+          {profile ? (
+            <Heading>{profile.displayName ?? profile.email}</Heading>
+          ) : (
+            <>
+              {/* No profile means the fetch failed — an em-dash said
+                  nothing and offered less. */}
+              <Body>{t('common.noConnection')}</Body>
+              <Button
+                label={t('common.retry')}
+                variant="secondary"
+                onPress={() => void refreshProfile()}
+              />
+            </>
+          )}
           {profile ? (
             <View
               style={{
@@ -168,8 +196,8 @@ export default function Settings() {
               <ToggleRow
                 label={t('settings.enableNotifications')}
                 description={t('settings.notificationsBody')}
-                value={notifications?.storyReady ?? true}
-                onValueChange={(next) => void updatePreference({ storyReady: next })}
+                value={(notifications?.pushEnabled ?? true) && (notifications?.storyReady ?? true)}
+                onValueChange={(next) => void updatePreference({ pushEnabled: next, storyReady: next })}
               />
               {notifications && notifications.quietFromMinute !== null && notifications.quietToMinute !== null ? (
                 <Caption>
@@ -195,6 +223,7 @@ export default function Settings() {
               />
             </>
           )}
+          {pushError ? <ErrorNotice message={pushError} /> : null}
         </Card>
 
         <Card style={{ gap: spacing.sm }}>
@@ -242,10 +271,19 @@ export default function Settings() {
               <Button
                 label={t('common.remove')}
                 variant="ghost"
-                onPress={async () => {
-                  await removeOffline(entry.storyId);
-                  await refresh();
-                }}
+                onPress={() =>
+                  Alert.alert(t('reader.removeDownload'), entry.title, [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    {
+                      text: t('common.remove'),
+                      style: 'destructive',
+                      onPress: async () => {
+                        await removeOffline(entry.storyId);
+                        await refresh();
+                      },
+                    },
+                  ])
+                }
               />
             </View>
           ))}

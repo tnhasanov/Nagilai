@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession } from '../../src/session';
 import { useT } from '../../src/i18n';
+import { LOCALE_NAMES, isLocale } from '../../src/i18n/locales';
 import type { ChildProfile } from '../../src/api';
 import {
   Body,
@@ -40,8 +41,11 @@ export default function Children() {
       setChildren(next);
       setError(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('children.loadFailed'));
-      setChildren([]);
+      /* Localised, and the previous list survives a refetch failure —
+         `setChildren([])` was wiping loaded profiles on a dropped
+         connection. */
+      setError(t('children.loadFailed'));
+      setChildren((current) => current ?? []);
     }
   }, [api, t]);
 
@@ -56,9 +60,16 @@ export default function Children() {
   return (
     <Screen edges={[]}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
-        {error ? <ErrorNotice message={error} /> : null}
+        {error ? (
+          <View style={{ gap: spacing.sm }}>
+            <ErrorNotice message={error} />
+            <Button variant="secondary" label={t('common.retry')} onPress={() => void load()} />
+          </View>
+        ) : null}
 
-        {children.length === 0 ? (
+        {/* Never under an error: "no child profiles yet" beneath "we
+            could not load your children" is a contradiction. */}
+        {children.length === 0 && !error ? (
           <EmptyState
             title={t('children.emptyTitle')}
             description={t('children.emptyDescription')}
@@ -67,7 +78,12 @@ export default function Children() {
         ) : (
           <>
             {children.map((child) => (
-              <Pressable key={child.id} accessibilityRole="button">
+              <Pressable
+                key={child.id}
+                accessibilityRole="button"
+                accessibilityLabel={t('children.editLabel', { name: child.nickname ?? child.name })}
+                onPress={() => router.push(`/child/${child.id}`)}
+              >
                 <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                   <View
                     style={{
@@ -91,7 +107,9 @@ export default function Children() {
                         child.ageYears !== null
                           ? t('children.yearsOld', { count: child.ageYears })
                           : null,
-                        child.preferredLanguage,
+                        isLocale(child.preferredLanguage)
+                          ? LOCALE_NAMES[child.preferredLanguage]
+                          : child.preferredLanguage,
                       ]
                         .filter(Boolean)
                         .join(' · ')}

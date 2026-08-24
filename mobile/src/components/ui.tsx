@@ -203,17 +203,22 @@ export function Chip({
   selected,
   onPress,
   accent,
+  accessibilityLabel,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
   accent?: string | null;
+  /** For chips whose visible label is decorative — a colour swatch's
+      blank label announced nothing at all. */
+  accessibilityLabel?: string;
 }) {
   const palette = usePalette();
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected }}
       onPress={onPress}
       style={{

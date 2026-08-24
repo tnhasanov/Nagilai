@@ -35,34 +35,39 @@ export default function AppLayout() {
         name="library"
         options={{
           title: t('tabs.library'),
-          tabBarIcon: ({ color }) => <TabIcon glyph="📚" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="📚" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
           title: t('tabs.create'),
-          tabBarIcon: ({ color }) => <TabIcon glyph="✨" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="✨" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="children"
         options={{
           title: t('tabs.children'),
-          tabBarIcon: ({ color }) => <TabIcon glyph="🧒" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="🧒" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: t('tabs.settings'),
-          tabBarIcon: ({ color }) => <TabIcon glyph="⚙️" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="⚙️" focused={focused} />,
         }}
       />
     </Tabs>
   );
 }
 
-function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
-  return <Text style={{ fontSize: 20, color }}>{glyph}</Text>;
+/*
+ * Focus is shown with opacity, not colour. Emoji glyphs ignore a Text
+ * colour on both platforms, so tinting the active tab amber changed
+ * nothing — the only signal of where you were was the 10pt label.
+ */
+function TabIcon({ glyph, focused }: { glyph: string; focused: boolean }) {
+  return <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.4 }}>{glyph}</Text>;
 }

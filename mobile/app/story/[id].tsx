@@ -4,6 +4,7 @@ import {
   Easing,
   FlatList,
   Pressable,
+  ScrollView,
   Share,
   Text,
   View,
@@ -129,6 +130,28 @@ export default function StoryScreen() {
     return () => clearInterval(timer);
   }, [api, id, story, load]);
 
+  /*
+   * And poll again while narration is being recorded. The generation
+   * poller above stops the moment the book is ready, but requesting
+   * audio starts a second wait it knows nothing about — this used to be
+   * a single reload six seconds after the request, which for a ten-page
+   * reading is far too early, so "Preparing the narration" span forever.
+   */
+  useEffect(() => {
+    const narration = story?.narration;
+    if (
+      !story ||
+      story.status !== 'ready' ||
+      !narration ||
+      narration.status === 'ready' ||
+      narration.status === 'failed'
+    ) {
+      return;
+    }
+    const timer = setInterval(() => void load(), 2500);
+    return () => clearInterval(timer);
+  }, [story, load]);
+
   if (error && !story) {
     return (
       <Screen scroll>
@@ -178,6 +201,7 @@ export default function StoryScreen() {
       saved={saved}
       downloading={downloading}
       busy={busy}
+      error={error}
       onDownload={async () => {
         setDownloading(0);
         const { entry } = await downloadStory(story, setDownloading);
@@ -186,6 +210,7 @@ export default function StoryScreen() {
       }}
       onShare={async () => {
         setBusy('share');
+        setError(null);
         try {
           const { share } = await api.stories.share(story.id, {
             allowAudio: true,
@@ -204,9 +229,12 @@ export default function StoryScreen() {
       }}
       onNarrate={async () => {
         setBusy('narrate');
+        setError(null);
         try {
           await api.stories.narrate(story.id, {});
-          setTimeout(() => void load(), 6000);
+          // The poller below takes it from here; this immediate reload
+          // just flips the button to "preparing" without a 6s guess.
+          await load();
         } catch (caught) {
           setError(caught instanceof ApiError ? caught.message : t('reader.narrateFailed'));
         } finally {
@@ -356,6 +384,7 @@ function Book({
   onDownload,
   onShare,
   onNarrate,
+  error,
 }: {
   story: ReaderStory;
   online: boolean;
@@ -365,12 +394,15 @@ function Book({
   onDownload: () => void;
   onShare: () => void;
   onNarrate: () => void;
+  /** A share or narration failure from the parent; rendered by the footer. */
+  error: string | null;
 }) {
   const palette = usePalette();
   const { t } = useI18n();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<Spread>>(null);
   const [index, setIndex] = useState(0);
+  const lastVoicePage = useRef<number | null>(null);
 
   const narration = useNarration(
     story.narration?.status === 'ready' ? story.narration.url : null,
@@ -384,15 +416,23 @@ function Book({
     },
   );
 
-  /* The voice turns the page (§10). */
+  /*
+   * The voice turns the page (§10) — but only when it reaches a NEW one.
+   * With `index` in the dependencies, a parent flipping ahead to look at
+   * a picture was snapped straight back to the narrated page on the next
+   * render. Remembering the last page the voice itself turned to means a
+   * manual swipe is left alone until the reading genuinely moves on.
+   */
   useEffect(() => {
-    if (narration.currentPage === null) return;
-    const target = narration.currentPage; // page 1 is spread index 1
-    if (target !== index) {
-      listRef.current?.scrollToIndex({ index: target, animated: true });
-      setIndex(target);
-    }
-  }, [narration.currentPage, index]);
+    if (narration.currentPage === null || narration.currentPage === lastVoicePage.current) return;
+    lastVoicePage.current = narration.currentPage;
+    listRef.current?.scrollToIndex({ index: narration.currentPage, animated: true });
+    setIndex(narration.currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [narration.currentPage]);
+
+  const narrationFailed = story.narration?.status === 'failed';
+  const narrationPending = story.narration != null && story.narration.status !== 'ready' && !narrationFailed;
 
   const spreads: Spread[] = [
     { kind: 'cover' },
@@ -448,6 +488,10 @@ function Book({
           backgroundColor: palette.paper,
         }}
       >
+        {/* Share and narration failures used to be swallowed: the
+            parent set state that nothing rendered once the book was
+            open. */}
+        {error ? <ErrorNotice message={error} /> : null}
         {narration.error ? (
           <Button label={t('common.retry')} variant="secondary" onPress={narration.reload} />
         ) : story.narration?.status === 'ready' && narration.isLoaded ? (
@@ -470,7 +514,12 @@ function Book({
               </Text>
             </Pressable>
 
-            <Pressable onPress={narration.restart} accessibilityLabel={t('reader.startAgain')}>
+            <Pressable
+              onPress={narration.restart}
+              accessibilityRole="button"
+              accessibilityLabel={t('reader.startAgain')}
+              style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
               <Text style={{ fontSize: 18 }}>↺</Text>
             </Pressable>
 
@@ -507,19 +556,29 @@ function Book({
                   narration.rate === 1 ? 1.25 : narration.rate === 1.25 ? 0.75 : 1,
                 )
               }
+              accessibilityRole="button"
               accessibilityLabel={t('reader.playbackSpeed')}
+              accessibilityValue={{ text: `${narration.rate}\u00d7` }}
+              style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
             >
               <Text style={[type.label, { color: palette.inkSoft }]}>{narration.rate}×</Text>
             </Pressable>
           </View>
         ) : (
-          <Button
-            label={story.narration ? t('reader.preparingNarration') : t('reader.listen')}
-            variant="secondary"
-            loading={busy === 'narrate' || Boolean(story.narration)}
-            disabled={Boolean(story.narration) || !online}
-            onPress={onNarrate}
-          />
+          <>
+            {/* A failed recording used to be indistinguishable from one
+                still being made: `Boolean(story.narration)` kept the
+                button disabled at "Preparing…" with a spinner, forever.
+                Failure says so, and Listen comes back as the retry. */}
+            {narrationFailed ? <ErrorNotice message={t('reader.narrateFailed')} /> : null}
+            <Button
+              label={narrationPending ? t('reader.preparingNarration') : t('reader.listen')}
+              variant="secondary"
+              loading={busy === 'narrate' || narrationPending}
+              disabled={narrationPending || !online}
+              onPress={onNarrate}
+            />
+          </>
         )}
 
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -612,12 +671,20 @@ function PageSpread({ page, total }: { page: ReaderPage; total: number }) {
         />
       ) : null}
 
-      <View style={{ flex: 1, padding: spacing.lg, justifyContent: 'center' }}>
+      {/* Vertical scroll inside the horizontal pager — orthogonal
+          directions, so no gesture conflict. A long page on a small
+          phone used to simply clip: the story could not be read. The
+          scroll indicator is deliberately left on, as the only cue that
+          more text exists below. */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, padding: spacing.lg, justifyContent: 'center' }}
+      >
         <Text style={[type.story, { color: palette.ink }]}>{page.text}</Text>
         <Caption style={{ textAlign: 'center', marginTop: spacing.lg }}>
           {page.pageNumber} / {total}
         </Caption>
-      </View>
+      </ScrollView>
     </Card>
   );
 }
@@ -627,7 +694,11 @@ function EndSpread({ story }: { story: ReaderStory }) {
   const { t } = useI18n();
 
   return (
-    <Card style={{ flex: 1, justifyContent: 'center', gap: spacing.md }}>
+    <Card style={{ flex: 1, padding: 0 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: spacing.md, padding: spacing.md }}
+      >
       <Title style={{ textAlign: 'center' }}>{t('reader.theEnd')}</Title>
       <View style={{ height: 1, width: 48, backgroundColor: palette.amber, alignSelf: 'center' }} />
 
@@ -652,6 +723,7 @@ function EndSpread({ story }: { story: ReaderStory }) {
           ))}
         </View>
       ) : null}
+      </ScrollView>
     </Card>
   );
 }
