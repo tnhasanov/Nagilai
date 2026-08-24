@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, Share, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  Easing,
+  FlatList,
+  Pressable,
+  Share,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { HeroBook } from '../../src/components/hero-book';
 import { useSession } from '../../src/session';
 import { useI18n } from '../../src/i18n';
 import { useNetworkStatus } from '../../src/network';
@@ -228,6 +238,7 @@ function GenerationProgress({ progress }: { progress: StoryProgress | null }) {
   const [busy, setBusy] = useState(false);
 
   const percent = progress?.percent ?? 5;
+  const stageKey = STAGE_KEYS[(progress?.status ?? '') as keyof typeof STAGE_KEYS];
 
   useEffect(() => {
     let cancelled = false;
@@ -252,11 +263,21 @@ function GenerationProgress({ progress }: { progress: StoryProgress | null }) {
 
   return (
     <Screen scroll>
-      <View style={{ alignItems: 'center', paddingTop: spacing.xxl, gap: spacing.md }}>
-        <Text style={{ fontSize: 44 }}>✨</Text>
+      <View style={{ alignItems: 'center', paddingTop: spacing.lg, gap: spacing.md }}>
+        {/* The book being made, rather than a 44px sparkle emoji. This is
+            the longest wait in the product and the moment of most
+            anticipation; it should show the thing that is coming. */}
+        <HeroBook />
         <Title>{t('reader.makingTitle')}</Title>
         <Body style={{ textAlign: 'center' }}>
-          {progress?.statusMessage ?? t('reader.makingDefault')}
+          {/*
+            `statusMessage` is written into the database by the worker, in
+            English, and rendering it here put an English sentence in the
+            middle of an otherwise translated screen. The status itself is
+            the fact worth showing, and the dictionary has a phrase for
+            each one.
+          */}
+          {stageKey ? t(stageKey) : t('reader.makingDefault')}
         </Body>
 
         <View
@@ -271,9 +292,7 @@ function GenerationProgress({ progress }: { progress: StoryProgress | null }) {
           accessibilityRole="progressbar"
           accessibilityValue={{ now: percent, min: 0, max: 100 }}
         >
-          <View
-            style={{ height: 8, width: `${Math.max(4, percent)}%`, backgroundColor: palette.amber }}
-          />
+          <AnimatedProgressBar percent={percent} colour={palette.amber} />
         </View>
 
         {progress && progress.totalIllustrations > 0 ? (
@@ -634,5 +653,52 @@ function EndSpread({ story }: { story: ReaderStory }) {
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * Story status → the dictionary key that describes it.
+ *
+ * `as const` so the values stay literal and `t()` still type-checks the
+ * key against the dictionary.
+ */
+const STAGE_KEYS = {
+  generating_text: 'reader.stageWriting',
+  text_ready: 'reader.stageAlmost',
+  generating_images: 'reader.stagePainting',
+  images_ready: 'reader.stagePainting',
+  generating_audio: 'reader.stageRecording',
+} as const;
+
+/**
+ * The filled part of the progress bar, easing to each new value.
+ *
+ * Progress arrives in jumps as the worker finishes whole jobs, and a bar
+ * that teleports from 30% to 95% reads as a glitch rather than as
+ * progress. Six hundred milliseconds of easing turns the same numbers
+ * into something that looks like work being done.
+ */
+function AnimatedProgressBar({ percent, colour }: { percent: number; colour: string }) {
+  const width = useRef(new Animated.Value(Math.max(4, percent))).current;
+
+  useEffect(() => {
+    Animated.timing(width, {
+      toValue: Math.max(4, percent),
+      duration: 600,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      /* A percentage width is a layout property, so this one cannot go
+         to the native driver. */
+      useNativeDriver: false,
+    }).start();
+  }, [percent, width]);
+
+  return (
+    <Animated.View
+      style={{
+        height: 8,
+        backgroundColor: colour,
+        width: width.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
+      }}
+    />
   );
 }

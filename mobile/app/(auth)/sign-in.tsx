@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/supabase';
 import { useI18n } from '../../src/i18n';
+import { HeroBook } from '../../src/components/hero-book';
 import {
   appleConfigured,
   completeGoogleSignIn,
@@ -130,9 +131,13 @@ export default function SignIn() {
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: spacing.md }}
           keyboardShouldPersistTaps="handled"
         >
+          {/* The first screen of the product used to be a 40px book
+              emoji above two fields. This is the same illustration the
+              website opens with, so the two front doors show the same
+              picture. */}
           <View style={{ marginBottom: spacing.lg, alignItems: 'center', gap: spacing.xs }}>
-            <Text style={{ fontSize: 40 }}>📖</Text>
-            <Title>{t('common.appName')}</Title>
+            <HeroBook />
+            <Title style={{ marginTop: spacing.sm }}>{t('common.appName')}</Title>
             <Body style={{ textAlign: 'center' }}>{t('auth.tagline')}</Body>
           </View>
 
