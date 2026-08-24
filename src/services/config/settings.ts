@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { createLogger } from '@/lib/logger';
+import { createLogger, describeError } from '@/lib/logger';
 import { supabaseAdmin } from '@/services/supabase/admin';
 
 /**
@@ -176,7 +176,7 @@ export async function getSetting<K extends SettingKey>(key: K): Promise<SettingV
     if (error) throw error;
     raw = data?.value ?? {};
   } catch (error) {
-    log.warn('falling back to default configuration', { key, error: String(error) });
+    log.warn('falling back to default configuration', { key, ...describeError(error) });
   }
 
   const parsed = schema.safeParse(raw);

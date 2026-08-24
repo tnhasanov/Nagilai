@@ -195,8 +195,10 @@ export function StoryWizard({
               </button>
               <span
                 className={cn(
-                  'hidden text-sm font-semibold sm:block',
-                  position === step ? 'text-ink' : 'text-ink-faint',
+                  'text-sm font-semibold',
+                  /* On a phone only the step you are on is named; three
+                     labels do not fit and three bare circles say nothing. */
+                  position === step ? 'text-ink' : 'hidden text-ink-faint sm:block',
                 )}
               >
                 {label}
@@ -425,8 +427,50 @@ export function StoryWizard({
           </section>
         ) : null}
 
+        {/*
+          The price, next to the button that spends it.
+
+          The summary panel beside the wizard carries this on a laptop, but
+          it is a grid sibling — on a phone it lands *after* the Create
+          button, so the one number a parent wants before committing was
+          the one thing below the fold. This is the same figure, in the
+          place the decision is made.
+        */}
+        {step === 2 && canAfford ? (
+          <p className="mt-9 flex items-baseline justify-between gap-4 rounded-tile bg-paper-sunken px-4 py-3 text-sm lg:hidden">
+            <span className="text-ink-soft">{strings.create.costTitle}</span>
+            <span className="font-bold text-ink">
+              {estimate.total} {strings.common.credits}
+            </span>
+          </p>
+        ) : null}
+
+        {!canAfford ? (
+          <div role="alert" className="mt-10 rounded-tile bg-rose-soft px-4 py-3.5 text-sm text-rose">
+            <p className="font-semibold">
+              {format(strings.create.notEnough, { needed: estimate.total, balance: creditBalance })}
+            </p>
+            <p className="mt-1 opacity-85">{strings.create.notEnoughHelp}</p>
+
+            {/* An escape hatch rather than an upsell: there is nothing to
+                buy yet, so the only honest help is the cheaper book they
+                can actually afford tonight. */}
+            {offerTextOnly ? (
+              <Button variant="secondary" className="mt-3" onClick={() => setStyleSlug('')}>
+                {format(strings.create.withoutPictures, { count: textOnly.total })}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* ---- Navigation ----------------------------------------- */}
-        <div className="mt-10 flex items-center justify-between gap-3">
+        <div
+          className={cn(
+            'flex items-center justify-between gap-3',
+            canAfford ? 'mt-10 lg:mt-10' : 'mt-5',
+            step === 2 && canAfford ? 'mt-5 lg:mt-10' : null,
+          )}
+        >
           <Button variant="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
             <ArrowLeft />
             {strings.common.back}
@@ -445,23 +489,6 @@ export function StoryWizard({
           )}
         </div>
 
-        {!canAfford ? (
-          <div role="alert" className="mt-4 rounded-tile bg-rose-soft px-4 py-3.5 text-sm text-rose">
-            <p className="font-semibold">
-              {format(strings.create.notEnough, { needed: estimate.total, balance: creditBalance })}
-            </p>
-            <p className="mt-1 opacity-85">{strings.create.notEnoughHelp}</p>
-
-            {/* An escape hatch rather than an upsell: there is nothing to
-                buy yet, so the only honest help is the cheaper book they
-                can actually afford tonight. */}
-            {offerTextOnly ? (
-              <Button variant="ghost" className="-ml-2 mt-2.5" onClick={() => setStyleSlug('')}>
-                {format(strings.create.withoutPictures, { count: textOnly.total })}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {/* ---- Summary ---------------------------------------------- */}

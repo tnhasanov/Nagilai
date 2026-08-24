@@ -229,7 +229,7 @@ export function ChildForm({
             label={entry.label}
             defaultValue={entry.value}
             suggestions={suggestions[entry.field]}
-            hint={strings.children.suggestionsHint}
+            strings={strings.children}
           />
         ))}
       </section>
@@ -284,7 +284,16 @@ export function ChildForm({
         </p>
       ) : null}
 
-      <div className="flex justify-end gap-3">
+      {/*
+        Pinned to the bottom of the phone screen.
+
+        The form says only the name is required and then puts Save below
+        six sections of things that are not, so on a phone the parent had
+        to scroll past all of it to act on what they had just been told.
+        Sticky on small screens, ordinary on a laptop where the whole form
+        is visible anyway.
+      */}
+      <div className="pb-safe sticky bottom-0 -mx-4 flex justify-end gap-3 border-t border-line bg-paper/90 px-4 py-3.5 backdrop-blur-sm sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <Button type="button" variant="ghost" onClick={() => router.back()}>
           {strings.common.cancel}
         </Button>
@@ -330,77 +339,181 @@ function SectionHeader({
 }
 
 /**
- * A short list with the answer already written down.
+ * A short list with the answers already written down.
  *
- * The text input remains the source of truth — chips read from it and
- * write back into it — so what a parent sees is exactly what will be
- * saved, and pasting a comma-separated list still works. Above the cap
- * the unchosen chips go quiet rather than silently doing nothing, because
- * the server truncates over-long lists without complaint and a control
- * that ignores a tap is worse than one that says it is full.
+ * Every value is a chip. The ten suggestions are chips you switch on, and
+ * anything typed becomes a chip too — so the field shows its contents at
+ * a glance and a value is removed by tapping the thing itself rather than
+ * by editing a comma out of a sentence.
+ *
+ * The first version of this kept a permanent text box under each chip
+ * row. Six of them stacked down the form as six large empty sunken
+ * rectangles that read as unfilled required fields, which is precisely
+ * the impression this screen must not give: everything here is optional.
+ * The box now appears only when a parent asks for it.
+ *
+ * Above the cap the unchosen chips go quiet rather than silently doing
+ * nothing, because the server truncates over-long lists without
+ * complaint and a control that ignores a tap is worse than one that says
+ * it is full.
  */
 function SuggestField({
   name,
   label,
-  hint,
   suggestions,
   defaultValue,
+  strings,
 }: {
   name: string;
   label: string;
-  hint: string;
   suggestions: string[];
   defaultValue?: string[] | string;
+  strings: Dictionary['children'];
 }) {
-  const [text, setText] = useState(
-    Array.isArray(defaultValue) ? defaultValue.join(', ') : (defaultValue ?? ''),
+  const [chosen, setChosen] = useState<string[]>(() =>
+    Array.isArray(defaultValue) ? defaultValue : parseList(defaultValue ?? ''),
   );
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
 
-  const chosen = useMemo(() => parseList(text), [text]);
   const chosenKeys = useMemo(
     () => new Set(chosen.map((value) => value.toLocaleLowerCase())),
     [chosen],
   );
   const full = chosen.length >= HARD_LIMITS.maxInterestsPerField;
 
+  /* Anything chosen that is not one of the ten. Shown after the
+     suggestions so a parent's own words are never buried among ours. */
+  const suggestionKeys = useMemo(
+    () => new Set(suggestions.map((value) => value.toLocaleLowerCase())),
+    [suggestions],
+  );
+  const custom = chosen.filter((value) => !suggestionKeys.has(value.toLocaleLowerCase()));
+
   function toggle(value: string) {
     const key = value.toLocaleLowerCase();
-    const next = chosenKeys.has(key)
-      ? chosen.filter((entry) => entry.toLocaleLowerCase() !== key)
-      : [...chosen, value];
-    setText(next.join(', '));
+    setChosen((current) =>
+      chosenKeys.has(key)
+        ? current.filter((entry) => entry.toLocaleLowerCase() !== key)
+        : [...current, value],
+    );
+  }
+
+  /* Commas still split, so a pasted list behaves the way it looks. */
+  function commitDraft() {
+    const additions = parseList(draft).filter(
+      (value) => !chosenKeys.has(value.toLocaleLowerCase()),
+    );
+    if (additions.length > 0) {
+      setChosen((current) => [...current, ...additions].slice(0, HARD_LIMITS.maxInterestsPerField));
+    }
+    setDraft('');
+    setAdding(false);
   }
 
   return (
-    <Field label={label} hint={hint} htmlFor={name}>
-      <ul className="mb-2.5 flex flex-wrap gap-1.5">
-        {suggestions.map((value) => {
-          const selected = chosenKeys.has(value.toLocaleLowerCase());
-          return (
-            <li key={value}>
-              <button
-                type="button"
-                onClick={() => toggle(value)}
-                aria-pressed={selected}
-                disabled={full && !selected}
-                className={cn(
-                  'rounded-pill border px-3 py-1.5 text-sm transition-all',
-                  selected
-                    ? 'border-amber bg-amber-soft font-semibold text-amber-deep'
-                    : 'border-line bg-paper-raised text-ink-soft hover:border-line-strong',
-                  full && !selected ? 'cursor-not-allowed opacity-40' : null,
-                )}
-              >
-                {selected ? '✓ ' : '+ '}
-                {value}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+    <Field label={label} htmlFor={adding ? `${name}-draft` : undefined}>
+      {/* The value the form actually submits. `tagInput` accepts either a
+          list or this comma-separated string. */}
+      <input type="hidden" name={name} value={chosen.join(', ')} />
 
-      <Input id={name} name={name} value={text} onChange={(event) => setText(event.target.value)} />
+      <ul className="flex flex-wrap gap-1.5">
+        {suggestions.map((value) => (
+          <li key={value}>
+            <Chip
+              label={value}
+              selected={chosenKeys.has(value.toLocaleLowerCase())}
+              disabled={full && !chosenKeys.has(value.toLocaleLowerCase())}
+              onClick={() => toggle(value)}
+            />
+          </li>
+        ))}
+
+        {custom.map((value) => (
+          <li key={value}>
+            <Chip label={value} selected removable removeLabel={strings.remove} onClick={() => toggle(value)} />
+          </li>
+        ))}
+
+        {adding ? (
+          <li className="flex items-center gap-1.5">
+            <input
+              id={`${name}-draft`}
+              autoFocus
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onBlur={commitDraft}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitDraft();
+                } else if (event.key === 'Escape') {
+                  setDraft('');
+                  setAdding(false);
+                }
+              }}
+              placeholder={strings.addYourOwnPlaceholder}
+              maxLength={60}
+              className="w-52 rounded-pill border border-amber bg-paper-sunken px-3.5 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
+            />
+          </li>
+        ) : (
+          <li>
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              disabled={full}
+              className={cn(
+                'rounded-pill border border-dashed border-line-strong px-3.5 py-1.5 text-sm font-medium text-ink-faint transition-colors',
+                full ? 'cursor-not-allowed opacity-40' : 'hover:border-amber hover:text-amber-deep',
+              )}
+            >
+              + {strings.addYourOwn}
+            </button>
+          </li>
+        )}
+      </ul>
     </Field>
+  );
+}
+
+function Chip({
+  label,
+  selected,
+  disabled,
+  removable,
+  removeLabel,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  disabled?: boolean;
+  removable?: boolean;
+  removeLabel?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      aria-label={removable && removeLabel ? `${removeLabel}: ${label}` : undefined}
+      disabled={disabled}
+      className={cn(
+        /* py-1.5 on a 14px line box clears 44px with the label's own
+           leading, so these stay tappable on a phone. */
+        'rounded-pill border px-3.5 py-2 text-sm transition-all',
+        selected
+          ? 'border-amber bg-amber-soft font-semibold text-amber-deep'
+          : 'border-line bg-paper-sunken text-ink-soft hover:border-line-strong hover:text-ink',
+        disabled ? 'cursor-not-allowed opacity-40' : null,
+      )}
+    >
+      <span aria-hidden="true" className="mr-1 opacity-70">
+        {removable ? '\u00d7' : selected ? '\u2713' : '+'}
+      </span>
+      {label}
+    </button>
   );
 }
 

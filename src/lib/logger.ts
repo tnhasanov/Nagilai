@@ -81,5 +81,34 @@ export function describeError(error: unknown): Record<string, unknown> {
       ...(error.cause instanceof Error ? { cause: error.cause.message } : {}),
     };
   }
+
+  /*
+   * Not everything thrown is an `Error`. Supabase rejects with a plain
+   * `PostgrestError` — `{ message, details, hint, code }` — and
+   * `String()` renders that as "[object Object]", which is how a
+   * configuration read that was failing on every request for every key
+   * went unnoticed in the logs. Anything object-shaped gets its own
+   * fields out instead.
+   */
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    const described: Record<string, unknown> = {};
+    for (const key of ['message', 'code', 'details', 'hint', 'name', 'status']) {
+      const value = record[key];
+      /* Empty strings are dropped too: PostgrestError fills `code` and
+         `hint` with '' when it has nothing to say, and a log line is
+         worth more without them. */
+      if (value === undefined || value === null || value === '') continue;
+      described[key] = value;
+    }
+    if (Object.keys(described).length > 0) return described;
+
+    try {
+      return { value: JSON.stringify(error).slice(0, 500) };
+    } catch {
+      return { value: '[unserialisable object]' };
+    }
+  }
+
   return { value: String(error) };
 }

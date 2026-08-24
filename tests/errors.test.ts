@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppError, errors, isAppError, toAppError } from '@/lib/errors';
 import { attempt, fail, ok } from '@/lib/result';
 import { withRetry } from '@/lib/retry';
+import { describeError } from '@/lib/logger';
 
 /**
  * Error handling (§32).
@@ -127,5 +128,53 @@ describe('retry with backoff', () => {
       withRetry(fn, { label: 'test', baseDelayMs: 1, isRetryable: () => false }),
     ).rejects.toThrow();
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * What reaches the log when something fails.
+ *
+ * Written after a configuration read failed on every request, for every
+ * key, and logged `error: "[object Object]"` each time — because Supabase
+ * rejects with a plain `PostgrestError` rather than an `Error`, and
+ * `String()` has nothing useful to say about a plain object. The failure
+ * was completely visible and completely unreadable.
+ */
+describe('describeError', () => {
+  it('unpacks an Error, with its cause', () => {
+    const error = new Error('outer', { cause: new Error('inner') });
+    expect(describeError(error)).toEqual({ name: 'Error', message: 'outer', cause: 'inner' });
+  });
+
+  it('unpacks a Supabase PostgrestError, which is not an Error at all', () => {
+    const postgrest = {
+      message: 'permission denied for table app_settings',
+      code: '42501',
+      details: null,
+      hint: '',
+    };
+
+    // `details: null` and `hint: ''` are dropped: PostgrestError fills
+    // them in whether or not it has anything to say.
+    expect(describeError(postgrest)).toEqual({
+      message: 'permission denied for table app_settings',
+      code: '42501',
+    });
+  });
+
+  it('falls back to JSON for an object with no recognisable fields', () => {
+    expect(describeError({ weird: true })).toEqual({ value: '{"weird":true}' });
+  });
+
+  it('survives something that cannot be serialised', () => {
+    const circular: Record<string, unknown> = {};
+    circular['self'] = circular;
+
+    expect(describeError(circular)).toEqual({ value: '[unserialisable object]' });
+  });
+
+  it('still handles a primitive', () => {
+    expect(describeError('boom')).toEqual({ value: 'boom' });
+    expect(describeError(null)).toEqual({ value: 'null' });
   });
 });

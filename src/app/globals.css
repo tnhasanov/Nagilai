@@ -282,11 +282,18 @@
     }
   }
 
+  /* A sheet of paper.
+     Padded by default, because a card without it puts text against its
+     own border and eleven places in this app were doing exactly that —
+     the child form worst of all. Utilities outrank the components layer,
+     so `card p-8` and `card p-0` both still win; the default is only what
+     happens when nobody says otherwise, which should not be "none". */
   .card {
     background-color: var(--color-paper-raised);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-page);
+    padding: 1.5rem;
   }
 
   /* The warm halo behind the hero. Three offset radial gradients rather
