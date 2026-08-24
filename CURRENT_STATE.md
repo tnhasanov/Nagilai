@@ -316,46 +316,19 @@ Catalogued in `docs/DECISIONS.md` Part 1, and **not** being guessed at.
 
 ## 5b. Found by audit
 
-A fan-out audit of every signed-in surface produced 31 findings that
-survived an independent verification pass against the source. Most are
-now fixed — see the header. What follows is what is left, ordered by how
-much a parent would notice.
+A fan-out audit of every signed-in web surface produced 31 verified
+findings; all but two are now fixed. What remains:
 
-**Bugs**
+1. **Nothing in the signed-in app links to `/pricing`** — deliberately
+   blocked on §5.1/§5.2: there is nothing to sell until pricing is
+   decided.
+2. **The content column width varies from page to page** under the
+   fixed-width header — a judgement call, recorded rather than churned.
 
-1. **The "My own idea" theme tile leads nowhere.** Picking it never asks
-   for the idea.
-2. **Child-form validation errors are hard-coded English.** They come
-   back as `AppError.userMessage`, which is English by construction. The
-   wizard's insufficient-credits message is localised from `details`;
-   nothing else is. The general fix is a code-to-string map on the
-   client, as `messageFor` in `story-wizard.tsx` already does.
-
-**Flow**
-
-3. The free-plan child limit is invisible until Save fails.
-4. Nothing in the signed-in app links to `/pricing`, so a parent out of
-   credits has nowhere to go — blocked on §5.1 and §5.2 rather than open,
-   since there is nothing to sell them yet.
-5. Age is a bare number spinner with no "optional" marker, between two
-   fields that carry one.
-6. Pressing Next in the wizard keeps the phone's scroll position, so the
-   new step opens halfway down itself.
-7. The Favourites filter can render an empty page with no explanation.
-8. The edit-profile heading never says whose profile it is.
-
-**Visual**
-
-9. Sixteen theme tiles differ only by a 10px dot; the icons and
-   descriptions are fetched from the database and then discarded.
-10. "Something to learn" is a flat fifteen-item native dropdown, its
-    categories fetched and thrown away.
-11. On a phone the reader's owner toolbar wraps to three rows — five
-    36px buttons in a `flex-wrap` row — pushing the book below the fold,
-    with Delete beside Share.
-12. The page title shrinks between the children list and Add a child,
-    and the content column changes width from page to page under a
-    fixed-width header.
+A second audit of the four signed-in **native** screens is running; its
+verified findings (native reader narration polling, clipped story text
+on small phones, dead child cards with no edit path, settings toggles
+that fail silently) are the next block of work.
 
 ---
 
