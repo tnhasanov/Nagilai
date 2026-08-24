@@ -9,7 +9,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { createChild, updateChild } from '@/features/children/actions';
 import { HARD_LIMITS } from '@/config/constants';
 import { GENDER_VALUES, type ChildSuggestions, type SuggestionField } from '@/i18n/suggestions';
+import type { UiLocale } from '@/config/constants';
 import { cn } from '@/lib/utils';
+import { defaultStoryLanguage } from '@/i18n';
 import type { Dictionary } from '@/i18n';
 import type { ChildInput } from '@/features/children/schemas';
 
@@ -49,11 +51,14 @@ export function ChildForm({
   initial,
   languages,
   suggestions,
+  locale,
   strings,
 }: {
   initial?: ChildFormValues;
   languages: Array<{ code: string; nameNative: string; flag: string | null }>;
   suggestions: ChildSuggestions;
+  /** Seeds the story language for a new child. */
+  locale: UiLocale;
   strings: { children: Dictionary['children']; common: Dictionary['common'] };
 }) {
   const router = useRouter();
@@ -181,7 +186,7 @@ export function ChildForm({
           <Select
             id="preferredLanguage"
             name="preferredLanguage"
-            defaultValue={initial?.preferredLanguage ?? languages[0]?.code ?? 'en-US'}
+            defaultValue={initial?.preferredLanguage ?? defaultStoryLanguage(languages, locale)}
           >
             {languages.map((language) => (
               <option key={language.code} value={language.code}>
@@ -454,7 +459,7 @@ function SuggestField({
               }}
               placeholder={strings.addYourOwnPlaceholder}
               maxLength={60}
-              className="w-52 rounded-pill border border-amber bg-paper-sunken px-3.5 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
+              className="h-11 w-52 rounded-pill border border-amber bg-paper-sunken px-3.5 text-base text-ink placeholder:text-ink-faint"
             />
           </li>
         ) : (
@@ -464,7 +469,7 @@ function SuggestField({
               onClick={() => setAdding(true)}
               disabled={full}
               className={cn(
-                'rounded-pill border border-dashed border-line-strong px-3.5 py-1.5 text-sm font-medium text-ink-faint transition-colors',
+                'inline-flex min-h-11 items-center rounded-pill border border-dashed border-line-strong px-3.5 py-2 text-sm font-medium text-ink-soft transition-colors',
                 full ? 'cursor-not-allowed opacity-40' : 'hover:border-amber hover:text-amber-deep',
               )}
             >
@@ -500,9 +505,11 @@ function Chip({
       aria-label={removable && removeLabel ? `${removeLabel}: ${label}` : undefined}
       disabled={disabled}
       className={cn(
-        /* py-1.5 on a 14px line box clears 44px with the label's own
-           leading, so these stay tappable on a phone. */
-        'rounded-pill border px-3.5 py-2 text-sm transition-all',
+        /* `min-h-11` is the 44px phone tap target, matching `size: md` in
+           button.tsx. An earlier version of this comment claimed py-1.5
+           got there on its own; it does not — that is 38px. `py-2` still
+           matters for a long label that wraps at 375px. */
+        'inline-flex min-h-11 items-center rounded-pill border px-3.5 py-2 text-sm transition-all',
         selected
           ? 'border-amber bg-amber-soft font-semibold text-amber-deep'
           : 'border-line bg-paper-sunken text-ink-soft hover:border-line-strong hover:text-ink',

@@ -21,6 +21,15 @@ export interface CatalogueOption {
   accentColor?: string | null;
   isPremium?: boolean;
   category?: string;
+  /**
+   * The age band this option is written for.
+   *
+   * Carried to the client so the wizard can re-filter when a parent
+   * switches child. Filtering only on the server means filtering for
+   * whichever child happened to be first.
+   */
+  minAge?: number;
+  maxAge?: number;
 }
 
 export interface LanguageOption {
@@ -88,6 +97,8 @@ export async function getCatalogue(uiLocale: string, childAge: number | null = n
         icon: row.icon,
         accentColor: row.accent_color,
         isPremium: row.is_premium,
+        minAge: row.min_age,
+        maxAge: row.max_age,
       })),
     objectives: (objectives.data ?? [])
       .filter((row) => withinAge(row.min_age, row.max_age))
@@ -95,6 +106,8 @@ export async function getCatalogue(uiLocale: string, childAge: number | null = n
         slug: row.slug,
         label: localise(row.labels as Json, uiLocale),
         category: row.category,
+        minAge: row.min_age,
+        maxAge: row.max_age,
       })),
     styles: (styles.data ?? []).map((row) => ({
       slug: row.slug,

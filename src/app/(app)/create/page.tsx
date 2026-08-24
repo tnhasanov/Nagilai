@@ -32,9 +32,13 @@ export default async function CreatePage() {
     supabase.from('profiles').select('credit_balance').eq('id', user.id).maybeSingle(),
   ]);
 
-  // Themes and learning goals are filtered by the selected child's age, so
-  // the catalogue is built for whoever the wizard will open on.
-  const catalogue = await getCatalogue(locale, children[0]?.age_years ?? null);
+  // Unfiltered on purpose. This used to pass `children[0].age_years`, so
+  // the themes and learning goals a parent could choose from were the
+  // ones suitable for their *first* child and stayed that way when they
+  // picked a different one — a six-year-old's list offered to a
+  // ten-year-old. The wizard filters by the selected child in the
+  // browser, where it knows who is selected.
+  const catalogue = await getCatalogue(locale);
 
   return (
     <Shell showFooter={false}>
@@ -68,6 +72,7 @@ export default async function CreatePage() {
             },
           }}
           creditBalance={profile.data?.credit_balance ?? 0}
+          locale={locale}
         />
       </div>
     </Shell>

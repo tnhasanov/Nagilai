@@ -63,6 +63,7 @@ export default async function EditChildPage({ params }: { params: Promise<{ chil
           }}
           languages={catalogue.languages}
           suggestions={getChildSuggestions(locale)}
+          locale={locale}
           strings={{ children: t.children, common: t.common }}
         />
 

@@ -13,11 +13,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { createStoryAction } from '@/features/stories/actions';
 import { HARD_LIMITS } from '@/config/constants';
 import { cn } from '@/lib/utils';
-import { format } from '@/i18n';
+import { defaultStoryLanguage, format } from '@/i18n';
 import type { Dictionary } from '@/i18n';
 import { estimateStoryCost } from '@/services/credits/estimate';
-import type { Catalogue } from '@/features/stories/catalogue';
+import type { Catalogue, CatalogueOption } from '@/features/stories/catalogue';
 import type { StoryLength } from '@/types/database';
+import type { UiLocale } from '@/config/constants';
 
 export interface WizardChild {
   id: string;
@@ -63,6 +64,7 @@ export function StoryWizard({
   strings,
   costing,
   creditBalance,
+  locale,
 }: {
   /* Named `childProfiles` rather than `children`: React treats a prop
      called `children` specially, and this is data, not JSX. */
@@ -75,6 +77,8 @@ export function StoryWizard({
   };
   costing: WizardCosting;
   creditBalance: number;
+  /** Falls back to the parent's own language, not catalogue order. */
+  locale: UiLocale;
 }) {
   const router = useRouter();
   /*
@@ -94,9 +98,29 @@ export function StoryWizard({
   );
 
   const [languageCode, setLanguageCode] = useState(
-    childProfiles[0]?.preferredLanguage ?? catalogue.languages[0]?.code ?? 'en-US',
+    childProfiles[0]?.preferredLanguage ?? defaultStoryLanguage(catalogue.languages, locale),
   );
-  const [themeSlug, setThemeSlug] = useState(catalogue.themes[0]?.slug ?? 'adventure');
+  /*
+   * Age-filtered here rather than on the server, because the server does
+   * not know which child is selected — it used to filter for
+   * `children[0]` and leave that list in place however many times the
+   * parent switched child.
+   */
+  const themes = useMemo(
+    () => catalogue.themes.filter((option) => suitableFor(option, selectedChild?.ageYears ?? null)),
+    [catalogue.themes, selectedChild],
+  );
+  const objectives = useMemo(
+    () =>
+      catalogue.objectives.filter((option) => suitableFor(option, selectedChild?.ageYears ?? null)),
+    [catalogue.objectives, selectedChild],
+  );
+
+  const [themeSlug, setThemeSlug] = useState(
+    catalogue.themes.find((option) => suitableFor(option, childProfiles[0]?.ageYears ?? null))?.slug ??
+      catalogue.themes[0]?.slug ??
+      'adventure',
+  );
   const [objectiveSlug, setObjectiveSlug] = useState('');
   /* Empty when illustrations are switched off globally, so the wizard
      cannot price or promise a picture the server will not make. */
@@ -230,6 +254,25 @@ export function StoryWizard({
                       onClick={() => {
                         setChildId(child.id);
                         setLanguageCode(child.preferredLanguage);
+
+                        /* A theme or lesson chosen for one child may not
+                           be offered for another, and a selection that is
+                           no longer in the list is a silent one. */
+                        const allowed = catalogue.themes.filter((option) =>
+                          suitableFor(option, child.ageYears),
+                        );
+                        if (!allowed.some((option) => option.slug === themeSlug)) {
+                          setThemeSlug(allowed[0]?.slug ?? '');
+                        }
+                        if (
+                          objectiveSlug &&
+                          !catalogue.objectives.some(
+                            (option) =>
+                              option.slug === objectiveSlug && suitableFor(option, child.ageYears),
+                          )
+                        ) {
+                          setObjectiveSlug('');
+                        }
                       }}
                       className={cn(
                         'flex w-full items-center gap-4 rounded-card border p-4 text-left transition-all',
@@ -294,7 +337,7 @@ export function StoryWizard({
             <div>
               <p className="mb-3 text-sm font-semibold text-ink">{strings.create.theme}</p>
               <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                {catalogue.themes.map((theme) => {
+                {themes.map((theme) => {
                   const selected = theme.slug === themeSlug;
                   return (
                     <li key={theme.slug}>
@@ -329,7 +372,7 @@ export function StoryWizard({
             <Field label={strings.create.objective} htmlFor="objective" optional={strings.common.optional}>
               <Select id="objective" value={objectiveSlug} onChange={(e) => setObjectiveSlug(e.target.value)}>
                 <option value="">{strings.create.objectiveNone}</option>
-                {catalogue.objectives.map((objective) => (
+                {objectives.map((objective) => (
                   <option key={objective.slug} value={objective.slug}>
                     {objective.label}
                   </option>
@@ -513,12 +556,12 @@ export function StoryWizard({
             />
             <SummaryRow
               label={strings.create.theme}
-              value={catalogue.themes.find((t) => t.slug === themeSlug)?.label}
+              value={themes.find((t) => t.slug === themeSlug)?.label}
             />
             <SummaryRow
               label={strings.create.objective}
               value={
-                catalogue.objectives.find((o) => o.slug === objectiveSlug)?.label ??
+                objectives.find((o) => o.slug === objectiveSlug)?.label ??
                 strings.create.objectiveNone
               }
             />
@@ -617,6 +660,17 @@ function CostRow({ label, value, hint }: { label: string; value: number; hint?: 
       <dd className="shrink-0 font-semibold text-ink">{value}</dd>
     </div>
   );
+}
+
+/**
+ * Whether an option is written for a child of this age.
+ *
+ * Absent bounds mean "no opinion" rather than "nobody", so an option the
+ * catalogue did not band is offered to everyone.
+ */
+function suitableFor(option: CatalogueOption, age: number | null): boolean {
+  if (age === null || option.minAge === undefined) return true;
+  return age >= option.minAge && age <= (option.maxAge ?? age);
 }
 
 function SummaryRow({ label, value }: { label: string; value: string | undefined }) {

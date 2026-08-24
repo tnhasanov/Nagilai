@@ -24,7 +24,12 @@
   --color-paper-sunken: #f6efe4;
   --color-ink: #2b2119;
   --color-ink-soft: #6b5b4c;
-  --color-ink-faint: #9c8b7a;
+  /* Darker than it looks like it should be. At #9c8b7a this was 3.16:1
+     on paper and 2.88:1 on paper-sunken — under AA — and it is the
+     colour of every hint, caption, page count and placeholder in the
+     app. #776654 is 5.3:1 and 4.8:1. The dark-mode value already passed
+     and is unchanged. */
+  --color-ink-faint: #776654;
   --color-line: #eae0d3;
   --color-line-strong: #ddcfbc;
 

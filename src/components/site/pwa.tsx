@@ -126,7 +126,17 @@ function InstallPrompt({ strings }: { strings: PwaStrings }) {
     <div
       role="dialog"
       aria-label={strings.installTitle}
-      className="pb-safe fixed inset-x-0 bottom-0 z-50 px-4 pb-4 animate-rise sm:left-auto sm:right-4 sm:max-w-sm"
+      /*
+       * Under the header on a phone, not along the bottom.
+       *
+       * It used to sit at `bottom-0`, which was fine until the child
+       * form grew a sticky Save bar — then a banner nobody asked for
+       * appeared four seconds after load, directly on top of the button
+       * they were reaching for. Guessing an offset does not work either,
+       * because the bars differ in height. Nothing else occupies the band
+       * below the 64px header, so it cannot collide there.
+       */
+      className="fixed inset-x-0 top-[4.5rem] z-50 animate-rise px-4 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-auto sm:max-w-sm"
     >
       <div className="card flex items-center gap-4 p-4 shadow-lift">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-tile bg-amber-soft text-amber-deep">

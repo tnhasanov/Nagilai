@@ -32,6 +32,7 @@ export default async function NewChildPage() {
         <ChildForm
           languages={catalogue.languages}
           suggestions={getChildSuggestions(locale)}
+          locale={locale}
           strings={{ children: t.children, common: t.common }}
         />
       </div>

@@ -105,8 +105,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             notNow: t.common.notNow,
           }}
         />
+        {/*
+          Top, not bottom. Toasts confirm an action and then have to get
+          out of the way, and the bottom of the screen is now where the
+          child form's Save bar, the wizard's Create button and the
+          reader's controls all live — a toast there covers the thing the
+          parent is using. `mobileOffset` is load-bearing: without it
+          sonner falls back to a 16px top offset under 600px and the
+          toast covers the sticky header instead. 5rem clears the 4rem
+          header with a gap.
+        */}
         <Toaster
-          position="bottom-center"
+          position="top-center"
+          offset={{ top: '5rem' }}
+          mobileOffset={{ top: '5rem' }}
           toastOptions={{
             style: {
               background: 'var(--color-paper-raised)',

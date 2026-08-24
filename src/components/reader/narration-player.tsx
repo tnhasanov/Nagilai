@@ -167,7 +167,9 @@ export function NarrationPlayer({
 
         {/* The scrubber is an input[type=range] so keyboard and screen
             reader users get seeking for free. */}
-        <div className="relative flex min-w-0 flex-1 items-center">
+        {/* h-11 so the `absolute inset-0` range input below is a 44px target;
+          the visible track stays 6px, centred. */}
+        <div className="relative flex h-11 min-w-0 flex-1 items-center">
           <div className="h-1.5 w-full overflow-hidden rounded-pill bg-paper-sunken">
             <div
               className="h-full rounded-pill bg-amber transition-[width] duration-200"

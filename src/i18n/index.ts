@@ -102,3 +102,26 @@ export function clientLocale(): UiLocale {
   const value = match?.[1] ? decodeURIComponent(match[1]) : null;
   return value && value in DICTIONARIES ? (value as UiLocale) : DEFAULT_UI_LOCALE;
 }
+
+/**
+ * The story language to offer someone who has not chosen one.
+ *
+ * The parent's interface language, when it is also available as a story
+ * language. Everything defaulted to `languages[0]` before, which is
+ * catalogue sort order — Azerbaijani, for every parent, whichever
+ * language they were reading the app in. Since the wizard pre-fills
+ * story language from the child profile, a Turkish parent who did not
+ * notice the select got a whole Azerbaijani book, and only found out
+ * after spending the credits.
+ *
+ * Falls back to catalogue order, because a locale can be a valid
+ * interface language while an administrator has it switched off as a
+ * story language.
+ */
+export function defaultStoryLanguage(
+  available: ReadonlyArray<{ code: string }>,
+  locale: UiLocale,
+): string {
+  if (available.some((language) => language.code === locale)) return locale;
+  return available[0]?.code ?? DEFAULT_UI_LOCALE;
+}
