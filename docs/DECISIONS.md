@@ -31,6 +31,24 @@ soon".
 **What we need from you:** the monthly price per tier, the currencies
 (AZN, USD, EUR, TRY?), and whether credits are also sold as one-off packs.
 
+**And, sooner than the rest: the free tier does not currently work.** The
+three credits a new account starts with buy the *text* of a story. Every
+image is charged separately, and a story is one image per page plus a
+cover — so an illustrated six-page book is 8 credits, a ten-page one is
+12, and a sixteen-page one is 18. A new parent can therefore make exactly
+one kind of book: one with no pictures.
+
+This was hidden until recently. `createStory` checked the whole book, the
+wizard displayed the cost of its first job, and the two disagreed at the
+worst possible moment — after the parent had filled the form in. Both now
+run the same estimator and the wizard states the total up front, which
+makes the problem visible rather than solving it.
+
+Three dials, all rows in `app_settings` and none of them changed by me:
+`credits.signup_grant`, `credits.story_illustration`, and whether the
+free story is illustrated at all. Worth deciding after §1.2, because the
+per-image charge should be anchored to what an image actually costs.
+
 **Why it matters commercially:** a medium illustrated story of ten pages
 costs roughly **$0.45–0.55** at the seeded rate card — about 90% of that is
 the ten images. That is the number a subscription price has to clear. The

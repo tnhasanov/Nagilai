@@ -1,13 +1,25 @@
 # Current state
 
-**Last verified:** 2026-08-23 · **Branch:** `main`
+**Last verified:** 2026-08-24 · **Branch:** `main`
 The build is merged to `main` and Vercel deploys from it.
 
 Every claim below was checked by running something, not by remembering.
 Where a thing cannot be verified without a credential or a live service, it
 says so rather than assuming.
 
-**Nothing is deployed** — no hosted URL, no OpenAI key in use.
+**The site is live** at `nagilai.vercel.app`, signed into and used: an
+account was created, a child profile saved, and the story wizard reached.
+Generation itself has not run, because no OpenAI key is in use yet — so
+nothing below in §2 has moved.
+
+**What live use found.** Two faults, both fixed and both worth recording
+because neither was visible from any local check. The wizard quoted the
+cost of a story's *first job* while the server checked the whole book, so
+it said "this uses 1 credit" and then refused the story — the two sides
+had been computing the price separately. And the child form asked a
+parent to invent six lists of interests into six empty text boxes, which
+is a form people abandon. There is now one costing function shared by
+browser and server, and the common answers are one tap.
 
 **The Supabase project exists.** Region `eu-central-1` (Frankfurt), and the
 full schema is applied to it: 31 tables, **0 without row-level security**,
@@ -23,7 +35,7 @@ build that is real rather than proven-in-a-harness.
 | --- | --- | --- |
 | Web types | `npm run typecheck` | **exit 0** |
 | Web lint | `npm run lint` | **exit 0** |
-| Web tests | `npm test` | **178 passed**, 12 files |
+| Web tests | `npm test` | **196 passed**, 14 files |
 | Web build | `npm run build` | **succeeds**, 48 routes |
 | Database | 10 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
 | Database assertions | `npm run db:verify` | **"database assertions passed"** |
@@ -225,12 +237,33 @@ agent proxy blocks Expo's endpoints. Run them from your own machine.
 Catalogued in `docs/DECISIONS.md` Part 1, and **not** being guessed at.
 
 1. **Customer pricing** — plan prices, credit bundles, free-tier size.
-2. **The credit defaults do not work as a free tier.** A new parent gets 3
-   credits; an illustrated ten-page story costs 12 (one for text, eleven for
-   images). They are now told cleanly up front instead of receiving a broken
-   book, but they still cannot make one. Needs: the signup grant, the
-   per-image cost, and whether the free story includes illustrations at all.
-   Best answered after §2 gives measured costs.
+2. **The credit defaults do not work as a free tier — this is the live
+   blocker.** The seeded settings grant a new parent **3** credits and
+   charge **1** per image plus **1** for the text, so:
+
+   | Story | Images | Cost | Affordable on 3? |
+   | --- | --- | --- | --- |
+   | Short (6 pages), illustrated | 7 | **8** | no |
+   | Medium (10 pages), illustrated | 11 | **12** | no |
+   | Long (16 pages), illustrated | 17 | **18** | no |
+   | Any length, no pictures | 0 | **1** | yes |
+
+   So the only book a new account can make today is a book with no
+   pictures — which is not the product. The wizard now says this plainly
+   and offers the text-only version rather than failing after the fact,
+   but that is honesty about the problem, not a fix for it.
+
+   Three separate dials, and **I have deliberately not touched any of
+   them** (`app_settings.credits` and `app_settings.generation_limits`):
+
+   - `signup_grant` — how many credits a new account starts with.
+   - `story_illustration` — the per-image charge.
+   - whether the free story is illustrated at all.
+
+   Any one of them unblocks it; which one is a pricing decision, and it
+   is worth answering *after* §2 measures what an image actually costs,
+   because that is the number the charge should be anchored to. Changing
+   a value is a row in `app_settings` — no deployment, no migration.
 3. **Children's privacy regime** — Azerbaijan-only vs GDPR/UK-AADC vs
    US-COPPA. Changes consent flows, retention, and the legal pages.
 4. **Photograph upload** — stays off until you say otherwise.
