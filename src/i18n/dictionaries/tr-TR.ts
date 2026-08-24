@@ -90,6 +90,7 @@ export const trTR: Dictionary = {
     signUpTitle: 'Hesabınızı oluşturun',
     signUpSubtitle: 'İlk masallarınız bizden.',
     email: 'E-posta',
+    emailRequired: 'Önce e-posta adresinizi yazın.',
     password: 'Parola',
     displayName: 'Adınız',
     passwordHint: 'En az 10 karakter.',

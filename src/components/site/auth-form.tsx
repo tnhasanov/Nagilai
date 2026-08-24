@@ -80,7 +80,9 @@ export function AuthForm({ mode, strings }: { mode: Mode; strings: Dictionary['a
 
   function handleMagicLink(email: string) {
     if (!email) {
-      setError(strings.email);
+      // `strings.email` is the field label; a red box saying only "Email"
+      // is not an error message.
+      setError(strings.emailRequired);
       return;
     }
     startTransition(async () => {

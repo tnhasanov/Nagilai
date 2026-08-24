@@ -89,6 +89,7 @@ export const enUS = {
     signUpTitle: 'Create your account',
     signUpSubtitle: 'Your first stories are on us.',
     email: 'Email',
+    emailRequired: 'Enter your email address first.',
     password: 'Password',
     displayName: 'Your name',
     passwordHint: 'At least 10 characters.',

@@ -30,7 +30,10 @@ const buttonVariants = cva(
         sm: 'h-9 px-4 text-sm [&_svg]:size-4',
         md: 'h-11 px-6 text-[0.95rem] [&_svg]:size-[1.05rem]',
         lg: 'h-13 px-8 text-base [&_svg]:size-5',
-        icon: 'size-10 [&_svg]:size-[1.15rem]',
+        /* 44px, not 40. This is what the reader's phone-only page-turn
+           buttons use, and it already matches the size-11 the desktop
+           side arrow hard-codes in the same component. */
+        icon: 'size-11 [&_svg]:size-[1.15rem]',
         iconLg: 'size-14 [&_svg]:size-6',
       },
     },

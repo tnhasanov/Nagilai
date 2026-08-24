@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -395,6 +396,14 @@ function DeleteButton({ storyId, strings }: { storyId: string; strings: Strings 
         </DialogHeader>
 
         <DialogFooter>
+          {/* The only action here used to be Delete. A confirmation whose
+              sole button is the destructive one is not a confirmation —
+              closing it meant finding the × or pressing Escape. */}
+          <DialogClose asChild>
+            <Button variant="secondary" disabled={pending}>
+              {strings.common.cancel}
+            </Button>
+          </DialogClose>
           <Button
             variant="danger"
             disabled={pending}

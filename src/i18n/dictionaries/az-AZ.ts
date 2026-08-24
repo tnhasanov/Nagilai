@@ -90,6 +90,7 @@ export const azAZ: Dictionary = {
     signUpTitle: 'Hesab yaradın',
     signUpSubtitle: 'İlk nağıllarınız bizdən hədiyyə.',
     email: 'E-poçt',
+    emailRequired: 'Əvvəlcə e-poçt ünvanınızı yazın.',
     password: 'Şifrə',
     displayName: 'Adınız',
     passwordHint: 'Ən azı 10 simvol.',

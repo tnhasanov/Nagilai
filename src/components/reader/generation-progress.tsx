@@ -92,6 +92,26 @@ export function GenerationProgress({
     { key: 'ready', label: strings.ready, done: progress.status === 'ready', active: false },
   ];
 
+  /*
+   * The stage, in the parent's language.
+   *
+   * This line used to render `progress.statusMessage` — a string the
+   * worker writes into the database in English ("Painting the pictures")
+   * — inside an otherwise fully translated screen, with the localised
+   * `strings.queued` only reached when the column happened to be null.
+   * Keeping it as a fallback would just preserve the bug for whichever
+   * statuses set it, so it is gone: the status itself is the fact worth
+   * showing, and the dictionary already has a phrase for each one.
+   */
+  const stageLabel: Record<string, string> = {
+    generating_text: strings.writing,
+    text_ready: strings.textReady,
+    generating_images: strings.painting,
+    images_ready: strings.painting,
+    generating_audio: strings.recording,
+    ready: strings.ready,
+  };
+
   if (progress.status === 'failed') {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
@@ -144,7 +164,7 @@ export function GenerationProgress({
       </div>
 
       <h1 className="font-display text-2xl font-bold text-ink">{strings.title}</h1>
-      <p className="mt-2 text-sm text-ink-soft">{progress.statusMessage ?? strings.queued}</p>
+      <p className="mt-2 text-sm text-ink-soft">{stageLabel[progress.status] ?? strings.queued}</p>
 
       <div
         className="mt-8 h-2 w-full overflow-hidden rounded-pill bg-paper-sunken"

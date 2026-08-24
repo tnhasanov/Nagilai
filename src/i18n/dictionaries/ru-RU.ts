@@ -90,6 +90,7 @@ export const ruRU: Dictionary = {
     signUpTitle: 'Создайте аккаунт',
     signUpSubtitle: 'Первые сказки — за наш счёт.',
     email: 'Эл. почта',
+    emailRequired: 'Сначала введите адрес электронной почты.',
     password: 'Пароль',
     displayName: 'Ваше имя',
     passwordHint: 'Минимум 10 символов.',
