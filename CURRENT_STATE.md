@@ -37,6 +37,20 @@ single six-second refresh was the only re-check; a permanently disabled
 "Listen" button occupied the reader's primary slot; and the book
 dead-ended at "The End" with nowhere to go.
 
+Then a fan-out audit of every signed-in surface found 31 more, each
+verified against the source before being acted on. Also fixed: the
+wizard's theme list was age-filtered for `children[0]` and never
+re-filtered when you switched child; story language defaulted to
+catalogue order, so a Turkish parent got an Azerbaijani book;
+`--color-ink-faint` was 3.16:1, which is every hint and caption in the
+app; the waiting room's status line was English; the delete dialog had no
+Cancel; icon buttons and the narration scrubber were under 44px; two
+avatar colours were Tailwind's cold defaults; sage, plum and rose carried
+white text that failed in dark mode; and adding a child mid-story
+stranded you on the profile list. Two of the 31 were faults I had
+introduced an hour earlier — a stale comment claiming a tap target it did
+not meet, and an install banner landing on the new sticky Save bar.
+
 **One of those changes the brand's appearance**: primary buttons are
 visibly darker, because amber under white text was 3.0:1. The accent
 colour itself is untouched — soft amber backgrounds, badges, borders and
@@ -57,7 +71,7 @@ build that is real rather than proven-in-a-harness.
 | --- | --- | --- |
 | Web types | `npm run typecheck` | **exit 0** |
 | Web lint | `npm run lint` | **exit 0** |
-| Web tests | `npm test` | **203 passed**, 15 files |
+| Web tests | `npm test` | **207 passed**, 15 files |
 | Web build | `npm run build` | **succeeds**, 48 routes |
 | Database | 10 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
 | Database assertions | `npm run db:verify` | **"database assertions passed"** |
@@ -300,52 +314,48 @@ Catalogued in `docs/DECISIONS.md` Part 1, and **not** being guessed at.
 
 ---
 
-## 5b. Found by audit, not yet fixed
+## 5b. Found by audit
 
-Verified against the source by a second pass, ordered by how much a
-parent would notice. None is a regression — all pre-date this work.
+A fan-out audit of every signed-in surface produced 31 findings that
+survived an independent verification pass against the source. Most are
+now fixed — see the header. What follows is what is left, ordered by how
+much a parent would notice.
 
 **Bugs**
 
-1. **The wizard's theme list is built for the wrong child.**
-   `create/page.tsx` calls `getCatalogue(locale, children[0].age_years)`,
-   so themes and learning goals are age-filtered for the *first* child
-   and never change when a parent picks a different one. Fix: fetch
-   unfiltered and filter client-side against the selected child's age.
-2. **The "My own idea" theme tile leads nowhere** — picking it never asks
+1. **The "My own idea" theme tile leads nowhere.** Picking it never asks
    for the idea.
-3. **The waiting-room status line is always English**, because the
-   untranslated database string wins over the translated fallback.
-4. **Child-form validation errors are hard-coded English**, in an app
-   that otherwise ships four languages.
-5. **"Email me a sign-in link" with an empty field** shows a red box
-   saying only "Email".
+2. **Child-form validation errors are hard-coded English.** They come
+   back as `AppError.userMessage`, which is English by construction. The
+   wizard's insufficient-credits message is localised from `details`;
+   nothing else is. The general fix is a code-to-string map on the
+   client, as `messageFor` in `story-wizard.tsx` already does.
 
 **Flow**
 
-6. Saving a child returns to the children list rather than continuing to
-   the story the parent came to make.
-7. The child's story language defaults to catalogue sort order rather
-   than the language the parent is using the app in.
-8. The free-plan child limit is invisible until Save fails.
-9. Nothing in the signed-in app links to `/pricing`, so a parent out of
-   credits has nowhere to go — though there is nothing to sell them until
-   §5.1 and §5.2 are decided, so this one is blocked rather than open.
+3. The free-plan child limit is invisible until Save fails.
+4. Nothing in the signed-in app links to `/pricing`, so a parent out of
+   credits has nowhere to go — blocked on §5.1 and §5.2 rather than open,
+   since there is nothing to sell them yet.
+5. Age is a bare number spinner with no "optional" marker, between two
+   fields that carry one.
+6. Pressing Next in the wizard keeps the phone's scroll position, so the
+   new step opens halfway down itself.
+7. The Favourites filter can render an empty page with no explanation.
+8. The edit-profile heading never says whose profile it is.
 
 **Visual**
 
-10. Sixteen theme tiles differ only by a 10px dot; the icons and
-    descriptions are fetched from the database and then discarded.
-11. "Something to learn" is a flat fifteen-item native dropdown, its
+9. Sixteen theme tiles differ only by a 10px dot; the icons and
+   descriptions are fetched from the database and then discarded.
+10. "Something to learn" is a flat fifteen-item native dropdown, its
     categories fetched and thrown away.
-12. On a phone the reader's owner toolbar wraps to three rows, with
-    Delete beside Share.
-13. White text on the sage, plum and rose fills falls below readable
-    contrast in dark mode — the same class of fault as the amber CTA,
-    which is fixed.
-14. Two of the six avatar colours are Tailwind's default blue and violet
-    rather than design tokens, and the swatches are 36px targets that
-    announce a raw hex string.
+11. On a phone the reader's owner toolbar wraps to three rows — five
+    36px buttons in a `flex-wrap` row — pushing the book below the fold,
+    with Delete beside Share.
+12. The page title shrinks between the children list and Add a child,
+    and the content column changes width from page to page under a
+    fixed-width header.
 
 ---
 
