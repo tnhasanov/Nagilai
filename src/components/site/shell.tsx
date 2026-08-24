@@ -51,7 +51,18 @@ export async function Shell({
         creditBalance={creditBalance}
       />
       <main className="flex-1">{children}</main>
-      {showFooter ? <SiteFooter strings={dictionary.nav} /> : null}
+      {showFooter ? (
+        <SiteFooter
+          strings={{
+            ...dictionary.nav,
+            privacy: dictionary.common.privacy,
+            terms: dictionary.common.terms,
+            blurb: dictionary.common.footerBlurb,
+            rights: dictionary.common.footerRights,
+            privacyNote: dictionary.common.footerPrivacyNote,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

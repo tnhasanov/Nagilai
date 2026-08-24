@@ -18,9 +18,16 @@ import { supabaseBrowser } from '@/services/supabase/client';
  *     makes offline media caching acceptable at all.
  *  3. Offer to install, once, without nagging.
  */
-export function ProgressiveWebApp() {
+export interface PwaStrings {
+  installTitle: string;
+  installBody: string;
+  install: string;
+  notNow: string;
+}
+
+export function ProgressiveWebApp({ strings }: { strings: PwaStrings }) {
   useServiceWorker();
-  return <InstallPrompt />;
+  return <InstallPrompt strings={strings} />;
 }
 
 function useServiceWorker() {
@@ -77,7 +84,7 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-function InstallPrompt() {
+function InstallPrompt({ strings }: { strings: PwaStrings }) {
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
 
@@ -118,7 +125,7 @@ function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Install Nagilai"
+      aria-label={strings.installTitle}
       className="pb-safe fixed inset-x-0 bottom-0 z-50 px-4 pb-4 animate-rise sm:left-auto sm:right-4 sm:max-w-sm"
     >
       <div className="card flex items-center gap-4 p-4 shadow-lift">
@@ -127,10 +134,8 @@ function InstallPrompt() {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-ink">Add Nagilai to your home screen</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
-            Opens full screen, and books you have read stay available offline.
-          </p>
+          <p className="text-sm font-bold text-ink">{strings.installTitle}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">{strings.installBody}</p>
         </div>
 
         <Button
@@ -141,13 +146,13 @@ function InstallPrompt() {
             dismiss();
           }}
         >
-          Install
+          {strings.install}
         </Button>
 
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Not now"
+          aria-label={strings.notNow}
           className="rounded-pill p-1.5 text-ink-faint transition-colors hover:bg-paper-sunken hover:text-ink"
         >
           <X className="size-4" />

@@ -4,6 +4,7 @@ import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLocale, getDictionary } from '@/i18n';
 
 /**
  * Modal dialog.
@@ -18,8 +19,14 @@ export const DialogClose = DialogPrimitive.Close;
 
 export const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
->(function DialogContent({ className, children, hideClose, ...props }, ref) {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    hideClose?: boolean;
+    /** Overridable, but localised by default rather than English. */
+    closeLabel?: string;
+  }
+>(function DialogContent({ className, children, hideClose, closeLabel, ...props }, ref) {
+  const label = closeLabel ?? getDictionary(clientLocale()).common.close;
+
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/35 backdrop-blur-sm data-[state=open]:animate-fade" />
@@ -36,7 +43,7 @@ export const DialogContent = React.forwardRef<
         {!hideClose ? (
           <DialogPrimitive.Close
             className="absolute right-4 top-4 rounded-pill p-2 text-ink-faint transition-colors hover:bg-paper-sunken hover:text-ink"
-            aria-label="Close"
+            aria-label={label}
           >
             <X className="size-4" />
           </DialogPrimitive.Close>

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, Heart, Loader2, Share2, Sparkles } from 'lucide-react';
+import { AlertTriangle, BookOpen, Heart, Loader2, Share2, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toggleFavouriteAction } from '@/features/stories/actions';
@@ -118,14 +118,21 @@ function StoryCard({
             </div>
           )}
 
+          {/* `strings.open` used to be the label here, so a book that was
+              still being written announced itself as "OPEN…" — an action
+              verb standing in for a status, on the one card you cannot
+              open yet. Both bands sit on a fixed scrim rather than
+              `bg-ink`, which inverts at night and took the contrast with
+              it. */}
           {isBuilding ? (
-            <div className="absolute inset-x-0 bottom-0 bg-ink/70 px-3 py-2 text-center text-[0.7rem] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
-              {strings.open}…
+            <div className="absolute inset-x-0 bottom-0 bg-scrim px-3 py-2 text-center text-[0.7rem] font-bold uppercase tracking-wide text-on-scrim backdrop-blur-sm">
+              {commonStrings.making}…
             </div>
           ) : null}
 
           {story.status === 'failed' ? (
-            <div className="absolute inset-x-0 bottom-0 bg-rose/85 px-3 py-2 text-center text-[0.7rem] font-bold uppercase tracking-wide text-white">
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-scrim px-3 py-2 text-center text-[0.7rem] font-bold uppercase tracking-wide text-rose backdrop-blur-sm">
+              <AlertTriangle className="size-3" aria-hidden="true" />
               {commonStrings.retry}
             </div>
           ) : null}

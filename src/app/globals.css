@@ -59,6 +59,15 @@
   --color-action-hover: #8f4d13;
   --color-on-action: #ffffff;
 
+  /* ---- Scrim ------------------------------------------------------
+     A wash laid over cover art so a label on top stays readable. Fixed
+     in both themes on purpose: the status ribbons used `bg-ink/70`,
+     and `--color-ink` inverts at night — so in dark mode a "still being
+     made" band became white text on a pale cream wash. Artwork does not
+     invert, so neither should the thing covering it. */
+  --color-scrim: rgba(24, 18, 14, 0.72);
+  --color-on-scrim: #fdfaf4;
+
   /* ---- Type ------------------------------------------------------
      Literata for anything that behaves like a book — headings, story
      text, the printed PDF. Nunito for interface furniture. The app and

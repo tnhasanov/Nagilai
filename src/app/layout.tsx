@@ -3,6 +3,7 @@ import { Literata, Nunito } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ProgressiveWebApp } from '@/components/site/pwa';
 import { resolveLocale } from '@/i18n/server';
+import { getDictionary } from '@/i18n';
 import { siteUrl } from '@/config/env';
 import './globals.css';
 
@@ -82,6 +83,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await resolveLocale();
+  const t = getDictionary(locale);
 
   return (
     <html lang={locale} className={`${literata.variable} ${nunito.variable}`} suppressHydrationWarning>
@@ -95,7 +97,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="grain relative antialiased">
         {children}
-        <ProgressiveWebApp />
+        <ProgressiveWebApp
+          strings={{
+            installTitle: t.common.installTitle,
+            installBody: t.common.installBody,
+            install: t.common.install,
+            notNow: t.common.notNow,
+          }}
+        />
         <Toaster
           position="bottom-center"
           toastOptions={{

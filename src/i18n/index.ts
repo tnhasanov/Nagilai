@@ -1,4 +1,4 @@
-import { DEFAULT_UI_LOCALE, type UiLocale } from '@/config/constants';
+import { DEFAULT_UI_LOCALE, LOCALE_COOKIE, type UiLocale } from '@/config/constants';
 import { enUS, type Dictionary } from './dictionaries/en-US';
 import { azAZ } from './dictionaries/az-AZ';
 import { ruRU } from './dictionaries/ru-RU';
@@ -80,3 +80,25 @@ export function format(template: string, values: Record<string, string | number>
 }
 
 export { DEFAULT_UI_LOCALE };
+
+/**
+ * The locale a *client* component is running under.
+ *
+ * `resolveLocale` needs `next/headers` and so cannot be used from the
+ * browser. The root error boundary is the case that matters: it renders
+ * outside every layout, receives no props, and was therefore hard-coded
+ * English on a page a parent only ever sees when something has already
+ * gone wrong.
+ *
+ * Reads the same cookie the server writes. Falls back to English when
+ * there is no cookie, no document, or an unrecognised value.
+ */
+export function clientLocale(): UiLocale {
+  if (typeof document === 'undefined') return DEFAULT_UI_LOCALE;
+
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${LOCALE_COOKIE}=([^;]*)`),
+  );
+  const value = match?.[1] ? decodeURIComponent(match[1]) : null;
+  return value && value in DICTIONARIES ? (value as UiLocale) : DEFAULT_UI_LOCALE;
+}
