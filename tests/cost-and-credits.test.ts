@@ -3,7 +3,7 @@ import { computeCost, type PricingTable } from '@/services/usage/tracker';
 import { ManualPrintProvider } from '@/services/printing/manual';
 import { formatMicroUsd, formatMoney } from '@/lib/utils';
 import { stableHash, generateShareToken, safeEqual } from '@/lib/crypto';
-import { estimateStoryCost } from '@/services/credits';
+import { estimateStoryCost } from '@/services/credits/estimate';
 
 /**
  * Cost tracking and order arithmetic (§17, §34).
@@ -291,5 +291,40 @@ describe('what a whole story costs before it starts', () => {
     const long = estimateStoryCost({ pages: 16, illustrated: true, textCost: 1, illustrationCost: 1 });
 
     expect(long.total).toBeGreaterThan(short.total);
+  });
+
+  /**
+   * The regression this module was extracted for.
+   *
+   * `createStory` refused a book the wizard had already told the parent
+   * they could afford, because the wizard was showing the cost of the
+   * story's first job — one credit — while the server added up the whole
+   * book. Both now call this function, so the only way they can disagree
+   * again is by being given different inputs.
+   */
+  it('prices the whole book, not the first job', () => {
+    const perJob = 1;
+    const wholeBook = estimateStoryCost({
+      pages: 10,
+      illustrated: true,
+      textCost: perJob,
+      illustrationCost: perJob,
+    });
+
+    expect(wholeBook.total).not.toBe(perJob);
+    expect(wholeBook.total).toBe(12);
+
+    // A parent granted three credits at signup cannot afford this, and
+    // the number they are shown has to say so before they press Create.
+    expect(3 >= wholeBook.total).toBe(false);
+  });
+
+  it('is the same arithmetic wherever it is imported from', async () => {
+    // The wizard imports the pure module; the server re-exports it. A
+    // second copy is what caused the mismatch in the first place.
+    const server = await import('@/services/credits');
+    const input = { pages: 8, illustrated: true, textCost: 2, illustrationCost: 3 } as const;
+
+    expect(server.estimateStoryCost(input)).toEqual(estimateStoryCost(input));
   });
 });

@@ -5,6 +5,7 @@ import { ChildForm } from '@/components/children/child-form';
 import { getCurrentUser } from '@/services/supabase/server';
 import { getCatalogue } from '@/features/stories/catalogue';
 import { getDictionary } from '@/i18n';
+import { getChildSuggestions } from '@/i18n/suggestions';
 import { resolveLocale } from '@/i18n/server';
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default async function NewChildPage() {
 
         <ChildForm
           languages={catalogue.languages}
+          suggestions={getChildSuggestions(locale)}
           strings={{ children: t.children, common: t.common }}
         />
       </div>

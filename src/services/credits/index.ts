@@ -26,48 +26,12 @@ export async function costOf(kind: SpendKind): Promise<number> {
   return credits[kind];
 }
 
-export interface StoryCostEstimate {
-  /** Credits for the story text itself. */
-  text: number;
-  /** Credits for every image: one per page, plus the cover. */
-  illustrations: number;
-  /** How many images that is. */
-  imageCount: number;
-  total: number;
-}
-
 /**
- * What an illustrated story will cost in total, not just what its first
- * job costs.
- *
- * This matters because `story_illustration` is charged *per image* and a
- * story fans out to one image per page plus a cover. Checking only the
- * text cost before starting lets a parent begin a book they cannot
- * finish: the text succeeds, the first images succeed, and the rest fail
- * with `insufficient_credits` -- which is not retryable, so those jobs
- * dead-letter and the parent is left holding half a book.
- *
- * The page count is the target the model is asked for, so this is an
- * estimate: the model may return a page or two either side, and the
- * ledger always charges for what was actually produced. It is the right
- * number to *refuse* on, because refusing early costs a parent nothing
- * and refusing late costs them a broken story.
+ * Re-exported from a module without `server-only` so the wizard can show
+ * the parent the very number this file's callers enforce. See
+ * `./estimate.ts` for why that is not a nicety.
  */
-export function estimateStoryCost(input: {
-  pages: number;
-  illustrated: boolean;
-  textCost: number;
-  illustrationCost: number;
-}): StoryCostEstimate {
-  const imageCount = input.illustrated ? input.pages + 1 : 0;
-  const illustrations = imageCount * input.illustrationCost;
-  return {
-    text: input.textCost,
-    illustrations,
-    imageCount,
-    total: input.textCost + illustrations,
-  };
-}
+export { estimateStoryCost, type StoryCostEstimate } from './estimate';
 
 export async function getBalance(ownerId: string): Promise<number> {
   const { data, error } = await supabaseAdmin()

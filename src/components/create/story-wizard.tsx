@@ -15,6 +15,7 @@ import { HARD_LIMITS } from '@/config/constants';
 import { cn } from '@/lib/utils';
 import { format } from '@/i18n';
 import type { Dictionary } from '@/i18n';
+import { estimateStoryCost } from '@/services/credits/estimate';
 import type { Catalogue } from '@/features/stories/catalogue';
 import type { StoryLength } from '@/types/database';
 
@@ -26,6 +27,22 @@ export interface WizardChild {
   preferredLanguage: string;
   avatarColor: string | null;
   interests: string[];
+}
+
+/**
+ * Everything needed to price a book in the browser.
+ *
+ * Passed in whole rather than as a single pre-computed number, because
+ * the cost changes with two of the wizard's own controls — length and
+ * whether there are pictures — and a number worked out on the server is
+ * already stale by the time the parent picks "Long".
+ */
+export interface WizardCosting {
+  textCost: number;
+  illustrationCost: number;
+  /** The global switch. A parent cannot buy pictures that are turned off. */
+  illustrationsEnabled: boolean;
+  pagesByLength: Record<StoryLength, number>;
 }
 
 /**
@@ -44,7 +61,7 @@ export function StoryWizard({
   childProfiles,
   catalogue,
   strings,
-  creditCost,
+  costing,
   creditBalance,
 }: {
   /* Named `childProfiles` rather than `children`: React treats a prop
@@ -56,7 +73,7 @@ export function StoryWizard({
     common: Dictionary['common'];
     children: Dictionary['children'];
   };
-  creditCost: number;
+  costing: WizardCosting;
   creditBalance: number;
 }) {
   const router = useRouter();
@@ -74,7 +91,11 @@ export function StoryWizard({
   );
   const [themeSlug, setThemeSlug] = useState(catalogue.themes[0]?.slug ?? 'adventure');
   const [objectiveSlug, setObjectiveSlug] = useState('');
-  const [styleSlug, setStyleSlug] = useState(catalogue.styles[0]?.slug ?? 'storybook');
+  /* Empty when illustrations are switched off globally, so the wizard
+     cannot price or promise a picture the server will not make. */
+  const [styleSlug, setStyleSlug] = useState(
+    costing.illustrationsEnabled ? (catalogue.styles[0]?.slug ?? 'storybook') : '',
+  );
   const [length, setLength] = useState<StoryLength>('medium');
   const [customInstructions, setCustomInstructions] = useState('');
   const [dedication, setDedication] = useState('');
@@ -98,7 +119,35 @@ export function StoryWizard({
   }
 
   const steps = [strings.create.stepChild, strings.create.stepStory, strings.create.stepDetails];
-  const canAfford = creditBalance >= creditCost;
+
+  /*
+   * The same function the server runs before it accepts the story, out of
+   * the same module.
+   *
+   * This used to be a `creditCost` number handed down from the page, and
+   * it was the cost of the story's *first job*. So the wizard told a
+   * parent holding three credits that a ten-page illustrated book "uses 1
+   * credit", enabled the button, and the server refused it — one image
+   * per page plus a cover is twelve. Two places doing the same arithmetic
+   * is what caused that. There is now one.
+   */
+  const illustrated = costing.illustrationsEnabled && styleSlug !== '';
+  const pages = costing.pagesByLength[length];
+  const estimate = estimateStoryCost({
+    pages,
+    illustrated,
+    textCost: costing.textCost,
+    illustrationCost: costing.illustrationCost,
+  });
+  const textOnly = estimateStoryCost({
+    pages,
+    illustrated: false,
+    textCost: costing.textCost,
+    illustrationCost: costing.illustrationCost,
+  });
+  const canAfford = creditBalance >= estimate.total;
+  /* Only worth offering when it genuinely unblocks them. */
+  const offerTextOnly = illustrated && !canAfford && creditBalance >= textOnly.total;
 
   function submit() {
     startTransition(async () => {
@@ -114,7 +163,7 @@ export function StoryWizard({
       });
 
       if (!result.ok) {
-        toast.error(result.error.message);
+        toast.error(messageFor(result.error, strings));
         return;
       }
       router.push(`/library/${result.data.storyId}?progress=1`);
@@ -286,39 +335,41 @@ export function StoryWizard({
           <section className="animate-rise space-y-8">
             <h2 className="font-display text-2xl font-bold text-ink">{strings.create.stepDetails}</h2>
 
-            <div>
-              <p className="mb-3 text-sm font-semibold text-ink">{strings.create.style}</p>
-              <ul className="flex flex-wrap gap-2">
-                <li>
-                  <StylePill
-                    label={strings.create.styleNone}
-                    selected={styleSlug === ''}
-                    onClick={() => setStyleSlug('')}
-                  />
-                </li>
-                {catalogue.styles.map((style) => (
-                  <li key={style.slug}>
+            {costing.illustrationsEnabled ? (
+              <div>
+                <p className="mb-3 text-sm font-semibold text-ink">{strings.create.style}</p>
+                <ul className="flex flex-wrap gap-2">
+                  <li>
                     <StylePill
-                      label={style.label}
-                      selected={styleSlug === style.slug}
-                      onClick={() => setStyleSlug(style.slug)}
-                      premium={style.isPremium ? strings.create.premiumBadge : undefined}
+                      label={strings.create.styleNone}
+                      selected={styleSlug === ''}
+                      onClick={() => setStyleSlug('')}
                     />
                   </li>
-                ))}
-              </ul>
-            </div>
+                  {catalogue.styles.map((style) => (
+                    <li key={style.slug}>
+                      <StylePill
+                        label={style.label}
+                        selected={styleSlug === style.slug}
+                        onClick={() => setStyleSlug(style.slug)}
+                        premium={style.isPremium ? strings.create.premiumBadge : undefined}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             <div>
               <p className="mb-3 text-sm font-semibold text-ink">{strings.create.length}</p>
               <div className="grid grid-cols-3 gap-2.5">
                 {(
                   [
-                    ['short', strings.create.lengthShort, strings.create.lengthShortHint],
-                    ['medium', strings.create.lengthMedium, strings.create.lengthMediumHint],
-                    ['long', strings.create.lengthLong, strings.create.lengthLongHint],
+                    ['short', strings.create.lengthShort],
+                    ['medium', strings.create.lengthMedium],
+                    ['long', strings.create.lengthLong],
                   ] as const
-                ).map(([value, label, hint]) => (
+                ).map(([value, label]) => (
                   <button
                     key={value}
                     type="button"
@@ -338,7 +389,11 @@ export function StoryWizard({
                     >
                       {label}
                     </span>
-                    <span className="mt-0.5 block text-[0.7rem] text-ink-faint">{hint}</span>
+                    {/* The configured page count, not a sentence that has to
+                        be re-translated when an administrator changes it. */}
+                    <span className="mt-0.5 block text-[0.7rem] text-ink-faint">
+                      {format(strings.create.lengthPages, { count: costing.pagesByLength[value] })}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -391,10 +446,21 @@ export function StoryWizard({
         </div>
 
         {!canAfford ? (
-          <p className="mt-4 rounded-tile bg-rose-soft px-4 py-3 text-sm font-medium text-rose">
-            {format(strings.common.creditsLeft, { count: creditBalance })} —{' '}
-            {format(strings.create.costNote, { count: creditCost })}
-          </p>
+          <div role="alert" className="mt-4 rounded-tile bg-rose-soft px-4 py-3.5 text-sm text-rose">
+            <p className="font-semibold">
+              {format(strings.create.notEnough, { needed: estimate.total, balance: creditBalance })}
+            </p>
+            <p className="mt-1 opacity-85">{strings.create.notEnoughHelp}</p>
+
+            {/* An escape hatch rather than an upsell: there is nothing to
+                buy yet, so the only honest help is the cheaper book they
+                can actually afford tonight. */}
+            {offerTextOnly ? (
+              <Button variant="ghost" className="-ml-2 mt-2.5" onClick={() => setStyleSlug('')}>
+                {format(strings.create.withoutPictures, { count: textOnly.total })}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -438,17 +504,83 @@ export function StoryWizard({
             />
           </dl>
 
-          <div className="mt-6 flex items-center justify-between border-t border-line pt-4 text-sm">
-            <span className="font-semibold text-ink-soft">
-              {format(strings.create.costNote, { count: creditCost })}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-pill bg-amber-soft px-2.5 py-1 font-bold text-amber-deep">
-              <Sparkles className="size-3.5" aria-hidden="true" />
-              {creditBalance}
-            </span>
+          <div className="mt-6 border-t border-line pt-4">
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-ink-faint">
+              {strings.create.costTitle}
+            </p>
+
+            <dl className="mt-3 space-y-2 text-sm">
+              <CostRow label={strings.create.costText} value={estimate.text} />
+              {illustrated ? (
+                <CostRow
+                  label={format(strings.create.costPictures, { count: estimate.imageCount })}
+                  value={estimate.illustrations}
+                  hint={strings.create.imagesNote}
+                />
+              ) : null}
+              <div
+                className={cn(
+                  'flex items-baseline justify-between gap-4 border-t border-line pt-2 font-bold',
+                  canAfford ? 'text-ink' : 'text-rose',
+                )}
+              >
+                <dt>{strings.create.costTotal}</dt>
+                <dd>{estimate.total}</dd>
+              </div>
+            </dl>
+
+            <p className="mt-3 flex items-center justify-between gap-4 text-sm">
+              <span className="text-ink-faint">
+                {format(strings.common.creditsLeft, { count: creditBalance })}
+              </span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 font-bold',
+                  canAfford ? 'bg-amber-soft text-amber-deep' : 'bg-rose-soft text-rose',
+                )}
+              >
+                <Sparkles className="size-3.5" aria-hidden="true" />
+                {creditBalance}
+              </span>
+            </p>
           </div>
         </div>
       </aside>
+    </div>
+  );
+}
+
+/**
+ * Turns a failed action into a sentence in the parent's language.
+ *
+ * `error.message` is already parent-safe English written on the server,
+ * which is right for the API and the logs and wrong for a Turkish parent
+ * looking at a Turkish page. The one code whose numbers are worth reading
+ * is re-rendered from `details`; everything else keeps the server's
+ * wording rather than inventing a worse one.
+ */
+function messageFor(
+  error: { code: string; message: string; details?: Record<string, unknown> },
+  strings: { create: Dictionary['create'] },
+): string {
+  if (error.code === 'insufficient_credits') {
+    const needed = error.details?.['needed'];
+    const available = error.details?.['available'];
+    if (typeof needed === 'number' && typeof available === 'number') {
+      return format(strings.create.notEnough, { needed, balance: available });
+    }
+  }
+  return error.message;
+}
+
+function CostRow({ label, value, hint }: { label: string; value: number; hint?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-ink-soft">
+        {label}
+        {hint ? <span className="block text-[0.7rem] text-ink-faint">{hint}</span> : null}
+      </dt>
+      <dd className="shrink-0 font-semibold text-ink">{value}</dd>
     </div>
   );
 }

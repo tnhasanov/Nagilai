@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/services/supabase/server';
 import { getChild } from '@/features/children/queries';
 import { getCatalogue } from '@/features/stories/catalogue';
 import { getDictionary } from '@/i18n';
+import { getChildSuggestions } from '@/i18n/suggestions';
 import { resolveLocale } from '@/i18n/server';
 import { isAppError } from '@/lib/errors';
 
@@ -61,6 +62,7 @@ export default async function EditChildPage({ params }: { params: Promise<{ chil
             appearanceDescription: child.appearance_description ?? '',
           }}
           languages={catalogue.languages}
+          suggestions={getChildSuggestions(locale)}
           strings={{ children: t.children, common: t.common }}
         />
 

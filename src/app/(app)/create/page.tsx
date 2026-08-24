@@ -24,9 +24,11 @@ export default async function CreatePage() {
   const t = getDictionary(locale);
   const supabase = await supabaseServer();
 
-  const [children, credits, profile] = await Promise.all([
+  const [children, credits, limits, features, profile] = await Promise.all([
     listChildren(user.id),
     getSetting('credits'),
+    getSetting('generation_limits'),
+    getSetting('features'),
     supabase.from('profiles').select('credit_balance').eq('id', user.id).maybeSingle(),
   ]);
 
@@ -51,7 +53,20 @@ export default async function CreatePage() {
           }))}
           catalogue={catalogue}
           strings={{ create: t.create, common: t.common, children: t.children }}
-          creditCost={credits.story_text}
+          /* The ingredients of the price rather than the price, because
+             the wizard's own controls change it. `createStory` runs the
+             same estimator against the same settings before it accepts
+             anything, so the number shown is the number enforced. */
+          costing={{
+            textCost: credits.story_text,
+            illustrationCost: credits.story_illustration,
+            illustrationsEnabled: features.illustrations_enabled,
+            pagesByLength: {
+              short: limits.short.pages,
+              medium: limits.medium.pages,
+              long: limits.long.pages,
+            },
+          }}
           creditBalance={profile.data?.credit_balance ?? 0}
         />
       </div>

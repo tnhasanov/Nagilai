@@ -113,8 +113,17 @@ export const errors = {
     new AppError('rate_limited', 'Rate limit exceeded', {
       details: { retryAfterSeconds },
     }),
+  /**
+   * Names both numbers, because "you have used all your credits" is a lie
+   * when the parent has three and the book costs twelve. The web wizard
+   * localises this from `details`; this English sentence is what the API
+   * and the logs carry.
+   */
   insufficientCredits: (needed: number, available: number) =>
     new AppError('insufficient_credits', `Needs ${needed} credits, has ${available}`, {
+      userMessage:
+        `This story needs ${needed} ${needed === 1 ? 'credit' : 'credits'} and you have ` +
+        `${available}. Try a shorter story, or one without pictures.`,
       details: { needed, available },
     }),
   contentBlocked: (categories: string[]) =>
