@@ -235,6 +235,8 @@ export const ruRU: Dictionary = {
     fullscreen: 'Во весь экран',
     exitFullscreen: 'Выйти из полноэкранного режима',
     theEnd: 'Конец',
+    readAgain: 'Прочитать ещё раз',
+    backToLibrary: 'Вернуться в библиотеку',
     forGrownUps: 'Для взрослых',
     talkAbout: 'О чём поговорить вместе',
     illustrationFailed: 'Эта картинка не получилась.',

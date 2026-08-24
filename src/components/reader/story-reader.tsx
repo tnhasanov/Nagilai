@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, ImageOff, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ImageOff,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react';
 import { NarrationPlayer } from './narration-player';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -193,7 +202,7 @@ export function StoryReader({
           {isCover ? (
             <CoverSpread story={story} strings={strings} />
           ) : isClosing ? (
-            <ClosingSpread story={story} strings={strings} />
+            <ClosingSpread story={story} strings={strings} onReadAgain={() => goTo(0)} />
           ) : page ? (
             <PageSpread
               page={page}
@@ -399,7 +408,15 @@ function PageSpread({
   );
 }
 
-function ClosingSpread({ story, strings }: { story: ReaderStory; strings: Dictionary['reader'] }) {
+function ClosingSpread({
+  story,
+  strings,
+  onReadAgain,
+}: {
+  story: ReaderStory;
+  strings: Dictionary['reader'];
+  onReadAgain: () => void;
+}) {
   return (
     <article className="mx-auto max-w-2xl overflow-hidden rounded-card border border-line bg-paper-raised px-6 py-14 text-center shadow-book sm:px-12">
       <h2 className="font-display text-3xl font-bold text-ink sm:text-4xl">{strings.theEnd}</h2>
@@ -430,6 +447,25 @@ function ClosingSpread({ story, strings }: { story: ReaderStory; strings: Dictio
           ) : null}
         </div>
       ) : null}
+
+      {/* The book used to stop here. A child who has just finished
+          something they are in wants it again, and a parent wants back
+          to where the rest of them live; neither had anywhere to go
+          except the browser's back button. */}
+      <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <Button size="lg" onClick={onReadAgain}>
+          <RotateCcw />
+          {strings.readAgain}
+        </Button>
+        {/* Only for the owner. A visitor reading a shared book has no
+            library to go back to, and `ownerControls` is exactly how the
+            share page proves it renders no owner affordances. */}
+        {story.ownerControls ? (
+          <Button variant="secondary" size="lg" asChild>
+            <Link href="/library">{strings.backToLibrary}</Link>
+          </Button>
+        ) : null}
+      </div>
     </article>
   );
 }

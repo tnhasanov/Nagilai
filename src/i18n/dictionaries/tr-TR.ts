@@ -235,6 +235,8 @@ export const trTR: Dictionary = {
     fullscreen: 'Tam ekran',
     exitFullscreen: 'Tam ekrandan çık',
     theEnd: 'Son',
+    readAgain: 'Yeniden oku',
+    backToLibrary: 'Kitaplığıma dön',
     forGrownUps: 'Büyükler için',
     talkAbout: 'Birlikte konuşulacaklar',
     illustrationFailed: 'Bu resim olmadı.',

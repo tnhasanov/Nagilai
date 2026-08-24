@@ -235,6 +235,8 @@ export const azAZ: Dictionary = {
     fullscreen: 'Tam ekran',
     exitFullscreen: 'Tam ekrandan çıx',
     theEnd: 'Son',
+    readAgain: 'Yenidən oxu',
+    backToLibrary: 'Kitabxanama qayıt',
     forGrownUps: 'Böyüklər üçün',
     talkAbout: 'Birlikdə danışmaq üçün',
     illustrationFailed: 'Bu rəsm alınmadı.',

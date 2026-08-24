@@ -234,6 +234,8 @@ export const enUS = {
     fullscreen: 'Fullscreen',
     exitFullscreen: 'Exit fullscreen',
     theEnd: 'The End',
+    readAgain: 'Read it again',
+    backToLibrary: 'Back to my library',
     forGrownUps: 'For grown-ups',
     talkAbout: 'Things to talk about together',
     illustrationFailed: 'This picture did not come out.',

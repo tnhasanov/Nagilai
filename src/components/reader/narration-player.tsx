@@ -84,13 +84,22 @@ export function NarrationPlayer({
 
   /* No audio yet: offer to make it, or say it is on its way. */
   if (!narration || narration.status !== 'ready' || !narration.url) {
+    /*
+     * Nothing to play and no way to ask for it — a visitor reading a
+     * shared book, or an account that cannot narrate. This used to render
+     * anyway, as a greyed-out "Listen" in the primary slot of the reader's
+     * control bar: a button that looked like the main thing to do and
+     * could never be pressed. Absence is honest; a dead control is not.
+     */
+    if (!onRequestNarration) return null;
+
     return (
       <div className={className}>
         <Button
           variant="secondary"
           size="lg"
           onClick={onRequestNarration}
-          disabled={isQueued || !onRequestNarration}
+          disabled={isQueued}
           className="w-full sm:w-auto"
         >
           {isQueued ? <Spinner /> : <Play />}
