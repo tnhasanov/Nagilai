@@ -34,6 +34,7 @@ export const azAZ: Dictionary = {
     install: 'Quraşdır',
     notNow: 'İndi yox',
     creditsLeft: '{count} kredit qalıb',
+    checkDetails: 'Davam etməzdən əvvəl bəzi məlumatları düzəltmək lazımdır.',
   },
   nav: {
     library: 'Kitabxanam',
@@ -158,6 +159,9 @@ export const azAZ: Dictionary = {
     archive: 'Profili sil',
     archiveConfirm: 'Bu profil silinsin? Artıq yaradılmış nağıllar qalacaq.',
     yearsOld: '{age} yaş',
+    editChildNamed: '{name} profilini redaktə et',
+    limitReachedTitle: 'Planınız doludur',
+    limitReachedBody: 'Planınıza {count} uşaq profili daxildir. Birini silsəniz, yer açılar.',
   },
   create: {
     title: 'Nağıl yarat',
@@ -195,6 +199,11 @@ export const azAZ: Dictionary = {
     notEnoughHelp: 'Daha qısa və ya şəkilsiz nağıl daha ucuz başa gəlir.',
     withoutPictures: 'Şəkilsiz yarat ({count})',
     premiumBadge: 'Premium',
+    categoryValues: 'Xeyirxah böyümək',
+    categoryEmotional: 'Hisslər',
+    categoryAcademic: 'Öyrənmə',
+    categoryCuriosity: 'Maraq',
+    customThemeHint: 'Sizin ideyanız kitabın qəlbinə çevrilir — bir-iki cümlə bəs edir.',
   },
   progress: {
     title: 'Nağılınız hazırlanır',
@@ -214,6 +223,8 @@ export const azAZ: Dictionary = {
     subtitle: 'Yaratdığınız bütün nağıllar.',
     emptyTitle: 'Kitabxananız sizi gözləyir',
     emptyBody: 'İlk nağılınızı yaradın — burada yaşayacaq.',
+    noFavouritesTitle: 'Hələ sevimli yoxdur',
+    noFavouritesBody: 'Nağılın üzərindəki ürəyə toxunun — burada saxlanacaq.',
     createFirst: 'İlk nağılınızı yaradın',
     favourite: 'Sevimlilərə əlavə et',
     unfavourite: 'Sevimlilərdən çıxar',

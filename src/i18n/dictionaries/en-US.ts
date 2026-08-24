@@ -36,6 +36,7 @@ export const enUS = {
     install: 'Install',
     notNow: 'Not now',
     creditsLeft: '{count} credits left',
+    checkDetails: 'Some details need fixing before we can continue.',
   },
   nav: {
     library: 'My Library',
@@ -157,6 +158,9 @@ export const enUS = {
     archive: 'Remove profile',
     archiveConfirm: 'Remove this profile? Stories already made will be kept.',
     yearsOld: '{age} years old',
+    editChildNamed: 'Edit {name}’s profile',
+    limitReachedTitle: 'Your plan is full',
+    limitReachedBody: 'Your plan includes {count} child profiles. Removing one frees a place.',
   },
   create: {
     title: 'Create a story',
@@ -194,6 +198,11 @@ export const enUS = {
     notEnoughHelp: 'A shorter story, or one without pictures, costs less.',
     withoutPictures: 'Make it without pictures ({count})',
     premiumBadge: 'Premium',
+    categoryValues: 'Growing up kind',
+    categoryEmotional: 'Feelings',
+    categoryAcademic: 'Learning',
+    categoryCuriosity: 'Curiosity',
+    customThemeHint: 'Your idea becomes the heart of the book — a sentence or two is plenty.',
   },
   progress: {
     title: 'Making your story',
@@ -213,6 +222,8 @@ export const enUS = {
     subtitle: 'Every story you have made.',
     emptyTitle: 'Your library is waiting',
     emptyBody: 'Make your first story and it will live here.',
+    noFavouritesTitle: 'No favourites yet',
+    noFavouritesBody: 'Tap the heart on a story and it will be kept here.',
     createFirst: 'Create your first story',
     favourite: 'Favourite',
     unfavourite: 'Remove from favourites',

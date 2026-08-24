@@ -6,7 +6,7 @@ import { ArchiveChildButton } from '@/components/children/archive-child-button';
 import { getCurrentUser } from '@/services/supabase/server';
 import { getChild } from '@/features/children/queries';
 import { getCatalogue } from '@/features/stories/catalogue';
-import { getDictionary } from '@/i18n';
+import { format, getDictionary } from '@/i18n';
 import { getChildSuggestions } from '@/i18n/suggestions';
 import { resolveLocale } from '@/i18n/server';
 import { isAppError } from '@/lib/errors';
@@ -40,7 +40,11 @@ export default async function EditChildPage({ params }: { params: Promise<{ chil
   return (
     <Shell showFooter={false}>
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
-        <h1 className="mb-9 font-display text-3xl font-bold text-ink">{t.children.editChild}</h1>
+        {/* Named, because a parent with three children editing "profile"
+            has to guess whose it is from the field values. */}
+        <h1 className="mb-9 font-display text-3xl font-bold text-ink sm:text-4xl">
+          {format(t.children.editChildNamed, { name: child.nickname ?? child.name })}
+        </h1>
 
         <ChildForm
           initial={{

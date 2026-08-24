@@ -20,6 +20,8 @@ export interface CatalogueOption {
   icon?: string | null;
   accentColor?: string | null;
   isPremium?: boolean;
+  /** True for the "my own idea" theme, which asks for the idea. */
+  isCustomInput?: boolean;
   category?: string;
   /**
    * The age band this option is written for.
@@ -59,7 +61,7 @@ export async function getCatalogue(uiLocale: string, childAge: number | null = n
       .order('sort_order'),
     admin
       .from('themes')
-      .select('slug, labels, descriptions, icon, accent_color, is_premium, min_age, max_age')
+      .select('slug, labels, descriptions, icon, accent_color, is_premium, is_custom_input, min_age, max_age')
       .eq('is_active', true)
       .order('sort_order'),
     admin
@@ -97,6 +99,7 @@ export async function getCatalogue(uiLocale: string, childAge: number | null = n
         icon: row.icon,
         accentColor: row.accent_color,
         isPremium: row.is_premium,
+        isCustomInput: row.is_custom_input,
         minAge: row.min_age,
         maxAge: row.max_age,
       })),

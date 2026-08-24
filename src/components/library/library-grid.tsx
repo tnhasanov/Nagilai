@@ -69,11 +69,22 @@ export function LibraryGrid({
         ))}
       </div>
 
-      <ul className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-        {visible.map((story) => (
-          <StoryCard key={story.id} story={story} strings={strings} commonStrings={commonStrings} />
-        ))}
-      </ul>
+      {visible.length === 0 ? (
+        /* Only reachable through the favourites filter — the whole-library
+           empty state returns above. A blank grid under an active filter
+           reads as everything having vanished. */
+        <EmptyState
+          icon={<Heart />}
+          title={strings.noFavouritesTitle}
+          description={strings.noFavouritesBody}
+        />
+      ) : (
+        <ul className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+          {visible.map((story) => (
+            <StoryCard key={story.id} story={story} strings={strings} commonStrings={commonStrings} />
+          ))}
+        </ul>
+      )}
     </>
   );
 }

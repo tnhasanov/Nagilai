@@ -33,9 +33,12 @@ export async function createChild(input: ChildInput): Promise<ActionResult<{ id:
     const allowed = Math.min(planLimits.free.max_children, HARD_LIMITS.maxChildrenPerAccount);
 
     if (existing >= allowed) {
-      throw errors.validation(
-        `Your plan includes ${allowed} child profiles. Upgrade to add more.`,
-      );
+      // `details` is what the form localises from; the sentence is for
+      // the API and the logs.
+      throw errors.validation(`Your plan includes ${allowed} child profiles. Upgrade to add more.`, {
+        reason: 'child_limit',
+        allowed,
+      });
     }
 
     const supabase = await supabaseServer();

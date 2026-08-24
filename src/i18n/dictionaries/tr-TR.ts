@@ -34,6 +34,7 @@ export const trTR: Dictionary = {
     install: 'Yükle',
     notNow: 'Şimdi değil',
     creditsLeft: '{count} kredi kaldı',
+    checkDetails: 'Devam etmeden önce bazı bilgilerin düzeltilmesi gerekiyor.',
   },
   nav: {
     library: 'Kitaplığım',
@@ -158,6 +159,9 @@ export const trTR: Dictionary = {
     archive: 'Profili kaldır',
     archiveConfirm: 'Bu profil kaldırılsın mı? Oluşturulmuş masallar kalır.',
     yearsOld: '{age} yaşında',
+    editChildNamed: '{name} profilini düzenle',
+    limitReachedTitle: 'Planınız dolu',
+    limitReachedBody: 'Planınız {count} çocuk profili içeriyor. Birini kaldırırsanız yer açılır.',
   },
   create: {
     title: 'Masal oluştur',
@@ -195,6 +199,11 @@ export const trTR: Dictionary = {
     notEnoughHelp: 'Daha kısa ya da resimsiz bir masal daha ucuza gelir.',
     withoutPictures: 'Resimsiz oluştur ({count})',
     premiumBadge: 'Premium',
+    categoryValues: 'İyi kalpli büyümek',
+    categoryEmotional: 'Duygular',
+    categoryAcademic: 'Öğrenme',
+    categoryCuriosity: 'Merak',
+    customThemeHint: 'Fikriniz kitabın kalbi olur — bir iki cümle yeterli.',
   },
   progress: {
     title: 'Masalınız hazırlanıyor',
@@ -214,6 +223,8 @@ export const trTR: Dictionary = {
     subtitle: 'Oluşturduğunuz bütün masallar.',
     emptyTitle: 'Kitaplığınız bekliyor',
     emptyBody: 'İlk masalınızı oluşturun, burada yaşasın.',
+    noFavouritesTitle: 'Henüz favori yok',
+    noFavouritesBody: 'Bir masalın kalbine dokunun — burada saklanır.',
     createFirst: 'İlk masalınızı oluşturun',
     favourite: 'Favorilere ekle',
     unfavourite: 'Favorilerden çıkar',

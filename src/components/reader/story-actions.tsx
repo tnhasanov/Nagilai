@@ -64,11 +64,20 @@ export function StoryActions({
   };
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    /*
+     * One row that scrolls on a phone, rather than five buttons wrapping
+     * into three rows above the book — which pushed the book itself below
+     * the fold and left Delete sitting directly beside Share. The
+     * negative margins let the row bleed to the screen edge so the
+     * scrolling is visible; the divider keeps the destructive action from
+     * reading as one of the ordinary ones.
+     */
+    <div className="hide-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
       <ShareDialog storyId={storyId} initial={shareState} strings={strings} />
       <DownloadButton storyId={storyId} strings={strings} />
       <RemixDialog storyId={storyId} languages={languages} strings={strings} />
       <RenameDialog storyId={storyId} title={title} strings={strings} />
+      <span className="h-5 w-px shrink-0 bg-line" aria-hidden="true" />
       <DeleteButton storyId={storyId} strings={strings} />
     </div>
   );

@@ -34,6 +34,7 @@ export const ruRU: Dictionary = {
     install: 'Установить',
     notNow: 'Не сейчас',
     creditsLeft: 'Осталось кредитов: {count}',
+    checkDetails: 'Прежде чем продолжить, нужно исправить некоторые данные.',
   },
   nav: {
     library: 'Моя библиотека',
@@ -158,6 +159,9 @@ export const ruRU: Dictionary = {
     archive: 'Удалить профиль',
     archiveConfirm: 'Удалить этот профиль? Уже созданные сказки сохранятся.',
     yearsOld: '{age} лет',
+    editChildNamed: 'Профиль: {name}',
+    limitReachedTitle: 'Ваш план заполнен',
+    limitReachedBody: 'В ваш план входит профилей: {count}. Удалите один, чтобы освободить место.',
   },
   create: {
     title: 'Создать сказку',
@@ -195,6 +199,11 @@ export const ruRU: Dictionary = {
     notEnoughHelp: 'Сказка покороче или без картинок обойдётся дешевле.',
     withoutPictures: 'Создать без картинок ({count})',
     premiumBadge: 'Премиум',
+    categoryValues: 'Расти добрым',
+    categoryEmotional: 'Чувства',
+    categoryAcademic: 'Учёба',
+    categoryCuriosity: 'Любознательность',
+    customThemeHint: 'Ваша идея станет сердцем книги — одного-двух предложений достаточно.',
   },
   progress: {
     title: 'Создаём вашу сказку',
@@ -214,6 +223,8 @@ export const ruRU: Dictionary = {
     subtitle: 'Все созданные вами сказки.',
     emptyTitle: 'Библиотека ждёт',
     emptyBody: 'Создайте первую сказку — она поселится здесь.',
+    noFavouritesTitle: 'Пока нет избранного',
+    noFavouritesBody: 'Нажмите на сердечко на сказке — она сохранится здесь.',
     createFirst: 'Создать первую сказку',
     favourite: 'В избранное',
     unfavourite: 'Убрать из избранного',

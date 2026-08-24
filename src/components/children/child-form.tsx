@@ -11,7 +11,7 @@ import { HARD_LIMITS } from '@/config/constants';
 import { GENDER_VALUES, type ChildSuggestions, type SuggestionField } from '@/i18n/suggestions';
 import type { UiLocale } from '@/config/constants';
 import { cn } from '@/lib/utils';
-import { defaultStoryLanguage } from '@/i18n';
+import { defaultStoryLanguage, format } from '@/i18n';
 import type { Dictionary } from '@/i18n';
 import type { ChildInput } from '@/features/children/schemas';
 
@@ -112,7 +112,7 @@ export function ChildForm({
       const result = initial?.id ? await updateChild(initial.id, payload) : await createChild(payload);
 
       if (!result.ok) {
-        setError(result.error.message);
+        setError(messageFor(result.error, strings));
         return;
       }
 
@@ -194,7 +194,7 @@ export function ChildForm({
             />
           </Field>
 
-          <Field label={strings.children.age} htmlFor="ageYears">
+          <Field label={strings.children.age} htmlFor="ageYears" optional={strings.common.optional}>
             <Input
               id="ageYears"
               name="ageYears"
@@ -340,6 +340,28 @@ export function ChildForm({
       </div>
     </form>
   );
+}
+
+/**
+ * A failed save, in the parent's language.
+ *
+ * The server's `message` is parent-safe English — right for the API and
+ * the logs, wrong for a Turkish page. The two codes this form can
+ * actually produce are re-rendered from `code`/`details`; anything
+ * unexpected keeps the server's wording rather than gaining a worse one.
+ */
+function messageFor(
+  error: { code: string; message: string; details?: Record<string, unknown> },
+  strings: { children: Dictionary['children']; common: Dictionary['common'] },
+): string {
+  if (error.details?.['reason'] === 'child_limit') {
+    const allowed = error.details['allowed'];
+    return format(strings.children.limitReachedBody, {
+      count: typeof allowed === 'number' ? allowed : 0,
+    });
+  }
+  if (error.code === 'validation_failed') return strings.common.checkDetails;
+  return error.message;
 }
 
 function SectionHeader({

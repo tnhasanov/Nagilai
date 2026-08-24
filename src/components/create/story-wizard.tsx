@@ -1,9 +1,31 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Check, Sparkles, UserPlus } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bone,
+  BookOpen,
+  Check,
+  Compass,
+  Crown,
+  GraduationCap,
+  HeartHandshake,
+  Moon,
+  PawPrint,
+  Plane,
+  Rocket,
+  Search,
+  Smile,
+  Sparkles,
+  Trees,
+  UserPlus,
+  Users,
+  Zap,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +111,24 @@ export function StoryWizard({
    * card that is already selected is a tap that asks nothing.
    */
   const [step, setStep] = useState(childProfiles.length === 1 ? 1 : 0);
+
+  /*
+   * Each step starts at its own top. Changing step swaps the content in
+   * place, so on a phone the parent otherwise lands halfway down the new
+   * step at whatever scroll position the old one left them. Skipped on
+   * mount — arriving at the page should not yank it around — and the CSS
+   * `scroll-behavior` rules decide smooth versus instant, so a
+   * reduced-motion preference is honoured for free.
+   */
+  const topRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    topRef.current?.scrollIntoView({ block: 'start' });
+  }, [step]);
   const [pending, startTransition] = useTransition();
 
   const [childId, setChildId] = useState(childProfiles[0]?.id ?? '');
@@ -203,7 +243,7 @@ export function StoryWizard({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_20rem] lg:gap-12">
-      <div>
+      <div ref={topRef} className="scroll-mt-24">
         {/* ---- Stepper ------------------------------------------- */}
         <ol className="mb-9 flex items-center gap-2">
           {steps.map((label, position) => (
@@ -351,10 +391,12 @@ export function StoryWizard({
                             : 'border-line bg-paper-raised text-ink hover:border-line-strong',
                         )}
                       >
-                        <span
-                          className="mb-2 block size-2.5 rounded-pill"
-                          style={{ background: theme.accentColor ?? 'var(--color-amber)' }}
-                          aria-hidden="true"
+                        {/* The icon is in the database and was being
+                            fetched and thrown away, leaving sixteen tiles
+                            distinguishable only by a 10px dot. */}
+                        <ThemeGlyph
+                          name={theme.icon}
+                          colour={theme.accentColor ?? 'var(--color-amber)'}
                         />
                         {theme.label}
                         {theme.isPremium ? (
@@ -369,14 +411,51 @@ export function StoryWizard({
               </ul>
             </div>
 
+            {/* "My own idea" used to be a tile that led nowhere: pick
+                it, and nothing ever asked for the idea. The field is the
+                same one step 3 shows — one piece of state — surfaced at
+                the moment the choice creates the question. */}
+            {themes.find((t) => t.slug === themeSlug)?.isCustomInput ? (
+              <Field
+                label={strings.create.customInstructions}
+                hint={strings.create.customThemeHint}
+                htmlFor="custom-inline"
+              >
+                <Textarea
+                  id="custom-inline"
+                  value={customInstructions}
+                  onChange={(e) =>
+                    setCustomInstructions(e.target.value.slice(0, HARD_LIMITS.maxCustomInstructionChars))
+                  }
+                  placeholder={strings.create.customPlaceholder}
+                  rows={3}
+                />
+              </Field>
+            ) : null}
+
             <Field label={strings.create.objective} htmlFor="objective" optional={strings.common.optional}>
               <Select id="objective" value={objectiveSlug} onChange={(e) => setObjectiveSlug(e.target.value)}>
                 <option value="">{strings.create.objectiveNone}</option>
-                {objectives.map((objective) => (
-                  <option key={objective.slug} value={objective.slug}>
-                    {objective.label}
-                  </option>
-                ))}
+                {/* Grouped: fifteen flat options is a list nobody reads,
+                    and the categories were fetched and thrown away. An
+                    uncategorised objective still renders, ungrouped. */}
+                {groupObjectives(objectives, strings.create).map(([label, entries]) =>
+                  label ? (
+                    <optgroup key={label} label={label}>
+                      {entries.map((objective) => (
+                        <option key={objective.slug} value={objective.slug}>
+                          {objective.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : (
+                    entries.map((objective) => (
+                      <option key={objective.slug} value={objective.slug}>
+                        {objective.label}
+                      </option>
+                    ))
+                  ),
+                )}
               </Select>
             </Field>
           </section>
@@ -648,6 +727,64 @@ function messageFor(
     }
   }
   return error.message;
+}
+
+/**
+ * The seeded Lucide names, mapped by hand rather than resolved
+ * dynamically — importing all of lucide-react to look one up by string
+ * would put the whole icon set in the bundle. A name this map does not
+ * know falls back to the accent dot, so an administrator adding a theme
+ * with a new icon degrades gracefully instead of breaking the grid.
+ */
+const THEME_ICONS: Record<string, LucideIcon> = {
+  bone: Bone,
+  'book-open': BookOpen,
+  compass: Compass,
+  crown: Crown,
+  'graduation-cap': GraduationCap,
+  'heart-handshake': HeartHandshake,
+  moon: Moon,
+  'paw-print': PawPrint,
+  plane: Plane,
+  rocket: Rocket,
+  search: Search,
+  smile: Smile,
+  sparkles: Sparkles,
+  trees: Trees,
+  users: Users,
+  zap: Zap,
+};
+
+function ThemeGlyph({ name, colour }: { name: string | null | undefined; colour: string }) {
+  const Icon = name ? THEME_ICONS[name] : undefined;
+  if (!Icon) {
+    return <span className="mb-2 block size-2.5 rounded-pill" style={{ background: colour }} aria-hidden="true" />;
+  }
+  return <Icon className="mb-2 size-5" style={{ color: colour }} aria-hidden="true" />;
+}
+
+/**
+ * Objectives in category order, uncategorised ones first under no label.
+ * Categories keep the catalogue's own ordering rather than being sorted,
+ * so an administrator's sort_order survives the grouping.
+ */
+function groupObjectives(
+  objectives: CatalogueOption[],
+  strings: Dictionary['create'],
+): Array<[string | null, CatalogueOption[]]> {
+  const labels: Record<string, string> = {
+    values: strings.categoryValues,
+    emotional: strings.categoryEmotional,
+    academic: strings.categoryAcademic,
+    curiosity: strings.categoryCuriosity,
+  };
+
+  const groups = new Map<string | null, CatalogueOption[]>();
+  for (const objective of objectives) {
+    const key = objective.category ? (labels[objective.category] ?? objective.category) : null;
+    groups.set(key, [...(groups.get(key) ?? []), objective]);
+  }
+  return [...groups.entries()];
 }
 
 function CostRow({ label, value, hint }: { label: string; value: number; hint?: string }) {
