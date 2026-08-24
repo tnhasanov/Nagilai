@@ -136,6 +136,12 @@ export const azAZ: Dictionary = {
     appearanceHint:
       'Qısa təsvir rəsmlərin səhifədən səhifəyə uşağınıza bənzəməsinə kömək edir. Şəkil lazım deyil.',
     colour: 'Rəng',
+    colourPlum: 'Gavalı',
+    colourAmber: 'Kəhrəba',
+    colourSage: 'Adaçayı',
+    colourRose: 'Gül',
+    colourClay: 'Gil',
+    colourInk: 'Mürəkkəb',
     basics: 'Əsas məlumatlar',
     basicsHint: 'Yalnız ad lazımdır. Qalanlarını sonra da əlavə edə bilərsiniz.',
     loves: 'Nəyi sevir',

@@ -135,6 +135,12 @@ export const enUS = {
     appearanceHint:
       'A short description helps the illustrations look like your child, page after page. No photograph needed.',
     colour: 'Colour',
+    colourPlum: 'Plum',
+    colourAmber: 'Amber',
+    colourSage: 'Sage',
+    colourRose: 'Rose',
+    colourClay: 'Clay',
+    colourInk: 'Ink',
     basics: 'The basics',
     basicsHint: 'Only the name is needed. Everything else can wait.',
     loves: 'What they love',

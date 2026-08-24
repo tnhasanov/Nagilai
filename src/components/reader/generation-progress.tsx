@@ -186,7 +186,7 @@ export function GenerationProgress({
               className={cn(
                 'flex size-6 shrink-0 items-center justify-center rounded-pill border transition-colors',
                 step.done
-                  ? 'border-sage bg-sage text-white'
+                  ? 'border-sage bg-sage text-on-sage'
                   : step.active
                     ? 'border-amber text-amber'
                     : 'border-line text-ink-faint',

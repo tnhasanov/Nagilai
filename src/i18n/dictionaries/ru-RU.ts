@@ -136,6 +136,12 @@ export const ruRU: Dictionary = {
     appearanceHint:
       'Короткое описание помогает иллюстрациям быть похожими на вашего ребёнка страница за страницей. Фотография не нужна.',
     colour: 'Цвет',
+    colourPlum: 'Слива',
+    colourAmber: 'Янтарь',
+    colourSage: 'Шалфей',
+    colourRose: 'Роза',
+    colourClay: 'Глина',
+    colourInk: 'Чернила',
     basics: 'Основное',
     basicsHint: 'Нужно только имя. Остальное можно добавить позже.',
     loves: 'Любимые вещи',

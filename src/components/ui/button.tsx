@@ -22,8 +22,8 @@ const buttonVariants = cva(
         secondary:
           'bg-paper-raised text-ink border border-line-strong shadow-page hover:border-amber hover:text-amber-deep',
         ghost: 'text-ink-soft hover:bg-paper-sunken hover:text-ink',
-        plum: 'bg-plum text-white shadow-[0_2px_0_0_rgba(40,30,60,0.6)] hover:opacity-90',
-        danger: 'bg-rose-soft text-rose border border-rose/30 hover:bg-rose hover:text-white',
+        plum: 'bg-plum text-on-plum shadow-[0_2px_0_0_rgba(40,30,60,0.6)] hover:opacity-90',
+        danger: 'bg-rose-soft text-rose border border-rose/30 hover:bg-rose hover:text-on-rose',
         link: 'text-amber-deep underline-offset-4 hover:underline',
       },
       size: {

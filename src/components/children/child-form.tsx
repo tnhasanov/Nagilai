@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/field';
@@ -15,7 +15,23 @@ import { defaultStoryLanguage } from '@/i18n';
 import type { Dictionary } from '@/i18n';
 import type { ChildInput } from '@/features/children/schemas';
 
-const PALETTE = ['#4A3A6B', '#D97E28', '#4F7D5E', '#C4576B', '#3B82F6', '#8B5CF6'];
+/*
+ * Literal hex, because the value is persisted and `childInputSchema`
+ * validates it as `#rrggbb` — but every one of these is a real token
+ * from globals.css. Two of them used to be Tailwind's default blue and
+ * violet, which are the only cold colours anywhere in a product built
+ * entirely out of warm paper.
+ *
+ * Named, so the swatch can announce something better than "#4A3A6B".
+ */
+const PALETTE = [
+  { value: '#4A3A6B', key: 'colourPlum' },
+  { value: '#D97E28', key: 'colourAmber' },
+  { value: '#4F7D5E', key: 'colourSage' },
+  { value: '#C4576B', key: 'colourRose' },
+  { value: '#B0611A', key: 'colourClay' },
+  { value: '#2B2119', key: 'colourInk' },
+] as const;
 
 export interface ChildFormValues extends ChildInput {
   id?: string;
@@ -62,9 +78,10 @@ export function ChildForm({
   strings: { children: Dictionary['children']; common: Dictionary['common'] };
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [avatarColor, setAvatarColor] = useState(initial?.avatarColor || PALETTE[0]!);
+  const [avatarColor, setAvatarColor] = useState(initial?.avatarColor || PALETTE[0].value);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,7 +117,19 @@ export function ChildForm({
       }
 
       toast.success(strings.children.saved);
-      router.push('/children');
+
+      /*
+       * Back where they came from.
+       *
+       * Two of the four routes into this form are mid-story-creation —
+       * the wizard's "add a child first" empty state, and its "+ Add a
+       * child" tile — and both used to land a parent on the profile list
+       * with nothing telling them the story they came for was still two
+       * navigations away. `?next=` is the same convention the sign-in
+       * form already uses; the guard keeps it an in-app path.
+       */
+      const next = searchParams.get('next');
+      router.push(next?.startsWith('/') && !next.startsWith('//') ? next : '/children');
       router.refresh();
     });
   }
@@ -201,18 +230,20 @@ export function ChildForm({
           <legend className="mb-2.5 text-sm font-semibold text-ink">
             {strings.children.colour}
           </legend>
-          <div className="flex gap-2">
+          {/* `flex-wrap` because six 44px swatches and their gaps do not
+              fit inside a padded card at 375px. */}
+          <div className="flex flex-wrap gap-2">
             {PALETTE.map((colour) => (
               <button
-                key={colour}
+                key={colour.value}
                 type="button"
-                onClick={() => setAvatarColor(colour)}
-                aria-label={colour}
-                aria-pressed={avatarColor === colour}
-                className="size-9 rounded-pill border-2 transition-transform hover:scale-110"
+                onClick={() => setAvatarColor(colour.value)}
+                aria-label={strings.children[colour.key]}
+                aria-pressed={avatarColor === colour.value}
+                className="size-11 rounded-pill border-2 transition-transform hover:scale-110"
                 style={{
-                  background: colour,
-                  borderColor: avatarColor === colour ? 'var(--color-ink)' : 'transparent',
+                  background: colour.value,
+                  borderColor: avatarColor === colour.value ? 'var(--color-ink)' : 'transparent',
                 }}
               />
             ))}

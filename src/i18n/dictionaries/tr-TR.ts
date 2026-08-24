@@ -136,6 +136,12 @@ export const trTR: Dictionary = {
     appearanceHint:
       'Kısa bir tarif, çizimlerin sayfa sayfa çocuğunuza benzemesini sağlar. Fotoğraf gerekmez.',
     colour: 'Renk',
+    colourPlum: 'Erik',
+    colourAmber: 'Kehribar',
+    colourSage: 'Adaçayı',
+    colourRose: 'Gül',
+    colourClay: 'Kil',
+    colourInk: 'Mürekkep',
     basics: 'Temel bilgiler',
     basicsHint: 'Sadece isim gerekli. Gerisini sonra ekleyebilirsiniz.',
     loves: 'Nelerden hoşlanıyor',

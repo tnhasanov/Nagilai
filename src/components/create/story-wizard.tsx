@@ -139,7 +139,7 @@ export function StoryWizard({
         description={strings.create.addChildFirstBody}
         action={
           <Button asChild size="lg">
-            <Link href="/children/new">
+            <Link href="/children/new?next=/create">
               <UserPlus />
               {strings.children.addChild}
             </Link>
@@ -215,7 +215,7 @@ export function StoryWizard({
                 className={cn(
                   'flex size-8 shrink-0 items-center justify-center rounded-pill text-sm font-bold transition-colors',
                   position < step
-                    ? 'bg-sage text-white'
+                    ? 'bg-sage text-on-sage'
                     : position === step
                       ? 'bg-ink text-paper'
                       : 'bg-paper-sunken text-ink-faint',
@@ -303,7 +303,7 @@ export function StoryWizard({
 
               <li>
                 <Link
-                  href="/children/new"
+                  href="/children/new?next=/create"
                   className="flex h-full min-h-20 w-full items-center justify-center gap-2 rounded-card border border-dashed border-line-strong p-4 text-sm font-semibold text-ink-faint transition-colors hover:border-amber hover:text-amber-deep"
                 >
                   <UserPlus className="size-4" />

@@ -64,6 +64,17 @@
   --color-action-hover: #8f4d13;
   --color-on-action: #ffffff;
 
+  /* Same problem as `--color-action`, same shape of answer. Sage, plum
+     and rose all lighten at night, so white text on a filled one — the
+     completed step in the wizard, the done tick in the waiting room, the
+     hover state of the delete button — went unreadable in exactly the
+     mode this app is most used in. Literal near-black rather than
+     `var(--color-ink)`, because ink inverts too and would carry the
+     failure across with it. */
+  --color-on-sage: #ffffff;
+  --color-on-plum: #ffffff;
+  --color-on-rose: #ffffff;
+
   /* ---- Scrim ------------------------------------------------------
      A wash laid over cover art so a label on top stays readable. Fixed
      in both themes on purpose: the status ribbons used `bg-ink/70`,
@@ -205,6 +216,9 @@
     --color-action: #eda05a;
     --color-action-hover: #f2b982;
     --color-on-action: #241a12;
+    --color-on-sage: #241a12;
+    --color-on-plum: #241a12;
+    --color-on-rose: #241a12;
   }
 }
 
@@ -229,6 +243,9 @@
   --color-action: #eda05a;
   --color-action-hover: #f2b982;
   --color-on-action: #241a12;
+  --color-on-sage: #241a12;
+  --color-on-plum: #241a12;
+  --color-on-rose: #241a12;
 }
 
 /* =====================================================================
