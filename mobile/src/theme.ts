@@ -26,6 +26,15 @@ export interface Palette {
   sageSoft: string;
   rose: string;
   roseSoft: string;
+  /**
+   * What a filled primary control is painted with, as distinct from the
+   * amber accent. They are different jobs and only one of them has to
+   * carry text: amber under white is 3.0:1, which fails AA at button
+   * sizes, and every call to action in this app is a filled amber
+   * button. Soft amber backgrounds, chips and selected states still use
+   * `amber` and are unchanged. Mirrors `--color-action` in the web app.
+   */
+  action: string;
   onAccent: string;
 }
 
@@ -47,6 +56,7 @@ export const lightPalette: Palette = {
   sageSoft: '#E4EFE6',
   rose: '#C4576B',
   roseSoft: '#FBE7EA',
+  action: '#B0611A',
   onAccent: '#FFFFFF',
 };
 
@@ -68,6 +78,7 @@ export const darkPalette: Palette = {
   sageSoft: '#1C2A21',
   rose: '#E08FA0',
   roseSoft: '#2F1F24',
+  action: '#EDA05A',
   onAccent: '#1B1410',
 };
 

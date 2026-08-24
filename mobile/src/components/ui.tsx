@@ -80,7 +80,7 @@ export function Button({
 
   const background =
     variant === 'primary'
-      ? palette.amber
+      ? palette.action
       : variant === 'danger'
         ? palette.roseSoft
         : variant === 'secondary'

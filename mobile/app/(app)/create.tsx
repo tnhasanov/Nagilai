@@ -5,6 +5,7 @@ import { useSession } from '../../src/session';
 import { useI18n } from '../../src/i18n';
 import type { Catalogue, ChildProfile } from '../../src/api';
 import { ApiError } from '../../src/api';
+import { estimateStoryCost } from '../../src/credits';
 import {
   Body,
   Button,
@@ -114,8 +115,33 @@ export default function Create() {
     );
   }
 
-  const cost = catalogue.credits.storyText;
-  const canAfford = (profile?.creditBalance ?? 0) >= cost;
+  /*
+   * The whole book, not its first job.
+   *
+   * This was `catalogue.credits.storyText`, so a parent holding three
+   * credits was told a ten-page illustrated story cost 1, allowed to
+   * press Create, and refused by the server — which checks one image per
+   * page plus a cover. `src/credits.ts` is the same function the web app
+   * uses, pinned to it by a test on both sides.
+   */
+  const illustrated = catalogue.features['illustrations_enabled'] !== false && styleSlug !== null;
+  const pages = catalogue.lengths[length].pages;
+  const estimate = estimateStoryCost({
+    pages,
+    illustrated,
+    textCost: catalogue.credits.storyText,
+    illustrationCost: catalogue.credits.storyIllustration,
+  });
+  const textOnly = estimateStoryCost({
+    pages,
+    illustrated: false,
+    textCost: catalogue.credits.storyText,
+    illustrationCost: catalogue.credits.storyIllustration,
+  });
+  const balance = profile?.creditBalance ?? 0;
+  const canAfford = balance >= estimate.total;
+  /* Only offered when it genuinely unblocks them. */
+  const offerTextOnly = illustrated && !canAfford && balance >= textOnly.total;
 
   async function submit() {
     if (!childId || !languageCode || !themeSlug) return;
@@ -316,20 +342,48 @@ export default function Create() {
               hint={`${instructions.length} / 600`}
             />
 
+            {/* Itemised, so the total is never a surprise — the same
+                breakdown the web wizard shows. */}
+            <Card style={{ gap: spacing.xs }}>
+              <Caption>{t('create.costTitle')}</Caption>
+              <CostRow label={t('create.costText')} value={estimate.text} />
+              {illustrated ? (
+                <CostRow
+                  label={t('create.costPictures', { count: estimate.imageCount })}
+                  value={estimate.illustrations}
+                />
+              ) : null}
+              <CostRow label={t('create.costTotal')} value={estimate.total} emphasis />
+            </Card>
+
             {!canAfford ? (
-              <ErrorNotice
-                message={t('create.notEnoughCredits', {
-                  needed: cost,
-                  have: profile?.creditBalance ?? 0,
-                })}
-              />
+              <View style={{ gap: spacing.sm }}>
+                <ErrorNotice
+                  message={`${t('create.notEnoughCredits', {
+                    needed: estimate.total,
+                    have: balance,
+                  })} ${t('create.notEnoughHelp')}`}
+                />
+                {/* An escape hatch, not an upsell: there is nothing to buy
+                    yet, so the only honest help is the cheaper book they
+                    can actually afford tonight. */}
+                {offerTextOnly ? (
+                  <Button
+                    label={t('create.withoutPictures', { count: textOnly.total })}
+                    variant="ghost"
+                    onPress={() => setStyleSlug(null)}
+                  />
+                ) : null}
+              </View>
             ) : null}
 
             <Button
               label={
                 submitting
                   ? t('create.starting')
-                  : t('create.createButton', { cost: t('settings.credits', { count: cost }) })
+                  : t('create.createButton', {
+                      cost: t('settings.credits', { count: estimate.total }),
+                    })
               }
               loading={submitting}
               disabled={!canAfford || !childId || !themeSlug}
@@ -393,6 +447,15 @@ function Stepper({
           </Text>
         </Pressable>
       ))}
+    </View>
+  );
+}
+
+function CostRow({ label, value, emphasis }: { label: string; value: number; emphasis?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md }}>
+      <Body style={emphasis ? { fontWeight: '700' } : undefined}>{label}</Body>
+      <Body style={emphasis ? { fontWeight: '700' } : undefined}>{value}</Body>
     </View>
   );
 }

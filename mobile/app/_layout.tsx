@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { SessionProvider, useSession } from '../src/session';
 import { I18nProvider, useI18n } from '../src/i18n';
 import { configureNotificationHandler, ensureAndroidChannel, storyIdFromResponse } from '../src/push';
@@ -117,6 +117,16 @@ function useNotificationRouting(): void {
   const handled = useRef<string | null>(null);
 
   useEffect(() => {
+    /*
+     * Native only. `expo-notifications` has no web implementation, and
+     * `getLastNotificationResponse` does not fail softly there — it
+     * throws during render and takes the whole tree with it, so the app
+     * boots to a blank screen. `app.json` declares a web target and
+     * `expo export --platform web` is how these screens get previewed
+     * without a simulator, which is exactly when this bites.
+     */
+    if (Platform.OS === 'web') return;
+
     const open = (response: Notifications.NotificationResponse | null) => {
       const storyId = storyIdFromResponse(response);
       if (!storyId || handled.current === storyId) return;

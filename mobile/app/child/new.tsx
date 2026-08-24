@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSession } from '../../src/session';
 import { useI18n } from '../../src/i18n';
+import { getChildSuggestions } from '../../src/i18n/suggestions';
 import { ApiError, type Catalogue } from '../../src/api';
 import {
   Body,
@@ -43,6 +44,7 @@ export default function NewChild() {
   const router = useRouter();
   const palette = usePalette();
   const { t, locale } = useI18n();
+  const suggestions = getChildSuggestions(locale);
 
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null);
 
@@ -213,39 +215,44 @@ export default function NewChild() {
           </View>
         </View>
 
-        <Field
+        <SuggestField
           label={t('childForm.interests')}
           value={interests}
-          onChangeText={setInterests}
+          onChange={setInterests}
           hint={t('childForm.interestsHint')}
+          suggestions={suggestions.interests}
         />
 
-        <Field
+        <SuggestField
           label={t('childForm.animals')}
           value={animals}
-          onChangeText={setAnimals}
+          onChange={setAnimals}
           hint={t('childForm.interestsHint')}
+          suggestions={suggestions.favouriteAnimals}
         />
 
-        <Field
+        <SuggestField
           label={t('childForm.activities')}
           value={activities}
-          onChangeText={setActivities}
+          onChange={setActivities}
           hint={t('childForm.activitiesHint')}
+          suggestions={suggestions.favouriteActivities}
         />
 
-        <Field
+        <SuggestField
           label={t('childForm.personality')}
           value={personality}
-          onChangeText={setPersonality}
+          onChange={setPersonality}
           hint={t('childForm.personalityHint')}
+          suggestions={suggestions.personalityTraits}
         />
 
-        <Field
+        <SuggestField
           label={t('childForm.learning')}
           value={learning}
-          onChangeText={setLearning}
+          onChange={setLearning}
           hint={t('childForm.learningHint')}
+          suggestions={suggestions.learningInterests}
         />
 
         <Field
@@ -301,5 +308,57 @@ export default function NewChild() {
         />
       </ScrollView>
     </Screen>
+  );
+}
+
+/**
+ * A comma-separated list with the common answers already written down.
+ *
+ * The five list fields on this screen were bare text boxes, which on a
+ * phone keyboard at bedtime is the difference between adding a child and
+ * abandoning the form. Tapping a chip writes it into the field; the field
+ * stays fully editable, so anything a parent wants to type still works.
+ */
+function SuggestField({
+  label,
+  value,
+  onChange,
+  hint,
+  suggestions,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  hint: string;
+  suggestions: readonly string[];
+}) {
+  const chosen = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const chosenKeys = new Set(chosen.map((entry) => entry.toLocaleLowerCase()));
+
+  function toggle(entry: string) {
+    const key = entry.toLocaleLowerCase();
+    const next = chosenKeys.has(key)
+      ? chosen.filter((current) => current.toLocaleLowerCase() !== key)
+      : [...chosen, entry];
+    onChange(next.join(', '));
+  }
+
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Field label={label} value={value} onChangeText={onChange} hint={hint} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {suggestions.map((entry) => (
+          <Chip
+            key={entry}
+            label={entry}
+            selected={chosenKeys.has(entry.toLocaleLowerCase())}
+            onPress={() => toggle(entry)}
+          />
+        ))}
+      </View>
+    </View>
   );
 }
