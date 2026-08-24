@@ -325,10 +325,17 @@ findings; all but two are now fixed. What remains:
 2. **The content column width varies from page to page** under the
    fixed-width header — a judgement call, recorded rather than churned.
 
-A second audit of the four signed-in **native** screens is running; its
-verified findings (native reader narration polling, clipped story text
-on small phones, dead child cards with no edit path, settings toggles
-that fail silently) are the next block of work.
+A second audit of the four signed-in **native** screens produced 24
+verified findings — all fixed, the worst being: story text clipped
+unreadable on small phones; "Listen" stalling forever on a single
+six-second re-check; child cards that were dead controls, with no edit
+path in the app at all (there is a `/child/[id]` edit-and-archive route
+now); the language switcher silently withdrawing marketing consent on
+every change; and offline books unreachable exactly when offline. It
+also exposed a server bug: a failed narration's idempotency key blocked
+every retry for that voice and speed forever, so the new retry button
+would have queued nothing — a failed attempt now gets a retry
+discriminator, the same shape `retryStory` uses.
 
 ---
 
