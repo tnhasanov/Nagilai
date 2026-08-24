@@ -21,6 +21,28 @@ parent to invent six lists of interests into six empty text boxes, which
 is a form people abandon. There is now one costing function shared by
 browser and server, and the common answers are one tap.
 
+**A design pass followed**, run against the app in a real browser rather
+than by reading markup, plus a fan-out audit of every signed-in surface.
+Fixed: cards rendered with no padding in eleven places; the focus ring
+was being deleted from every input in the app; inputs were 15.2px, so
+iOS zoomed the page on every field; every call to action failed contrast
+(3.0:1 light, 2.1:1 dark) and now uses a separate `--color-action` token;
+the credit balance was hidden on phones; the "not enough credits" alert
+sat *below* the button it disabled; five parts of the interface were
+still hard-coded English, including the whole error screen and footer;
+the sign-in page had no language switcher, so a wrong locale guess
+trapped you there; a book still generating announced itself as "OPEN…"
+on a ribbon unreadable in dark mode; narration never arrived because a
+single six-second refresh was the only re-check; a permanently disabled
+"Listen" button occupied the reader's primary slot; and the book
+dead-ended at "The End" with nowhere to go.
+
+**One of those changes the brand's appearance**: primary buttons are
+visibly darker, because amber under white text was 3.0:1. The accent
+colour itself is untouched — soft amber backgrounds, badges, borders and
+selected states are exactly as they were. Worth a look before it goes
+further.
+
 **The Supabase project exists.** Region `eu-central-1` (Frankfurt), and the
 full schema is applied to it: 31 tables, **0 without row-level security**,
 16 themes seeded, 5 storage buckets. Confirmed by query against the real
@@ -35,7 +57,7 @@ build that is real rather than proven-in-a-harness.
 | --- | --- | --- |
 | Web types | `npm run typecheck` | **exit 0** |
 | Web lint | `npm run lint` | **exit 0** |
-| Web tests | `npm test` | **196 passed**, 14 files |
+| Web tests | `npm test` | **203 passed**, 15 files |
 | Web build | `npm run build` | **succeeds**, 48 routes |
 | Database | 10 migrations on a scratch Postgres 16 | **apply clean**, and **again idempotently** |
 | Database assertions | `npm run db:verify` | **"database assertions passed"** |
@@ -275,6 +297,55 @@ Catalogued in `docs/DECISIONS.md` Part 1, and **not** being guessed at.
 8. ~~**Data residency**~~ — **decided**: Frankfurt (`eu-central-1`). Vercel
    functions must be created in the same region.
 9. **Store submission** — nothing will be submitted without your approval.
+
+---
+
+## 5b. Found by audit, not yet fixed
+
+Verified against the source by a second pass, ordered by how much a
+parent would notice. None is a regression — all pre-date this work.
+
+**Bugs**
+
+1. **The wizard's theme list is built for the wrong child.**
+   `create/page.tsx` calls `getCatalogue(locale, children[0].age_years)`,
+   so themes and learning goals are age-filtered for the *first* child
+   and never change when a parent picks a different one. Fix: fetch
+   unfiltered and filter client-side against the selected child's age.
+2. **The "My own idea" theme tile leads nowhere** — picking it never asks
+   for the idea.
+3. **The waiting-room status line is always English**, because the
+   untranslated database string wins over the translated fallback.
+4. **Child-form validation errors are hard-coded English**, in an app
+   that otherwise ships four languages.
+5. **"Email me a sign-in link" with an empty field** shows a red box
+   saying only "Email".
+
+**Flow**
+
+6. Saving a child returns to the children list rather than continuing to
+   the story the parent came to make.
+7. The child's story language defaults to catalogue sort order rather
+   than the language the parent is using the app in.
+8. The free-plan child limit is invisible until Save fails.
+9. Nothing in the signed-in app links to `/pricing`, so a parent out of
+   credits has nowhere to go — though there is nothing to sell them until
+   §5.1 and §5.2 are decided, so this one is blocked rather than open.
+
+**Visual**
+
+10. Sixteen theme tiles differ only by a 10px dot; the icons and
+    descriptions are fetched from the database and then discarded.
+11. "Something to learn" is a flat fifteen-item native dropdown, its
+    categories fetched and thrown away.
+12. On a phone the reader's owner toolbar wraps to three rows, with
+    Delete beside Share.
+13. White text on the sage, plum and rose fills falls below readable
+    contrast in dark mode — the same class of fault as the amber CTA,
+    which is fixed.
+14. Two of the six avatar colours are Tailwind's default blue and violet
+    rather than design tokens, and the swatches are 36px targets that
+    announce a raw hex string.
 
 ---
 
