@@ -40,7 +40,11 @@ export async function Shell({
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader
-        strings={dictionary.nav}
+        strings={{
+          ...dictionary.nav,
+          menu: dictionary.common.menu,
+          interfaceLanguage: dictionary.common.interfaceLanguage,
+        }}
         locale={locale}
         isAuthenticated={Boolean(user)}
         isStaff={isStaff}

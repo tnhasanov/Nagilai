@@ -23,8 +23,21 @@ export const Label = React.forwardRef<
   );
 });
 
+/*
+ * Two things here are load-bearing and were previously wrong.
+ *
+ * **16px, not 15.2px.** iOS Safari zooms the whole page in when a focused
+ * input's font is under 16px, and then leaves you zoomed. Every form in
+ * the app did that on every field, on the device most parents use.
+ *
+ * **No `outline-none`.** `globals.css` gives `:focus-visible` an amber
+ * ring on purpose — "keyboard users are not an afterthought on a product
+ * families share between devices" — and this class was deleting it from
+ * every input, select and textarea in the app, leaving a 1px border
+ * colour change as the only focus signal. Colour alone is not a signal.
+ */
 const controlClass =
-  'w-full rounded-tile border border-line bg-paper-sunken px-4 py-3 text-[0.95rem] text-ink placeholder:text-ink-faint transition-colors duration-150 focus:border-amber focus:bg-paper-raised focus:outline-none focus-visible:outline-none disabled:opacity-60';
+  'w-full rounded-tile border border-line bg-paper-sunken px-4 py-3 text-base text-ink placeholder:text-ink-faint transition-colors duration-150 focus:border-amber focus:bg-paper-raised disabled:opacity-60';
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {

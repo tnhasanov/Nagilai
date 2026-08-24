@@ -42,6 +42,23 @@
   --color-rose: #c4576b;
   --color-rose-soft: #fbe7ea;
 
+  /* ---- The action colour, as opposed to the accent -----------------
+     Amber at #d97e28 carries white text at 3.0:1, which fails AA at
+     button text sizes — and every call to action in this product is a
+     solid amber button, so it failed everywhere at once. In dark mode
+     amber lightens to #eda05a and white on it is 2.1:1, worse again.
+
+     Separating "the amber accent" from "the colour a button is filled
+     with" fixes both without repainting the brand: soft amber
+     backgrounds, badges, borders and selected states still use --amber
+     exactly as before. Light fills with the deep tone under white
+     (4.6:1); dark fills with the light tone under near-black ink
+     (7.9:1), which is the right way round for a warm night palette
+     anyway. */
+  --color-action: #b0611a;
+  --color-action-hover: #8f4d13;
+  --color-on-action: #ffffff;
+
   /* ---- Type ------------------------------------------------------
      Literata for anything that behaves like a book — headings, story
      text, the printed PDF. Nunito for interface furniture. The app and
@@ -171,6 +188,9 @@
     --color-sage-soft: #1c2a21;
     --color-rose: #e08fa0;
     --color-rose-soft: #2f1f24;
+    --color-action: #eda05a;
+    --color-action-hover: #f2b982;
+    --color-on-action: #241a12;
   }
 }
 
@@ -192,6 +212,9 @@
   --color-sage-soft: #1c2a21;
   --color-rose: #e08fa0;
   --color-rose-soft: #2f1f24;
+  --color-action: #eda05a;
+  --color-action-hover: #f2b982;
+  --color-on-action: #241a12;
 }
 
 /* =====================================================================

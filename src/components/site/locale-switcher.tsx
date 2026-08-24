@@ -21,7 +21,17 @@ const LABELS: Record<UiLocale, string> = {
  * still create a Russian story, and switching here never touches an
  * existing story's language.
  */
-export function LocaleSwitcher({ current, className }: { current: UiLocale; className?: string }) {
+export function LocaleSwitcher({
+  current,
+  label,
+  className,
+}: {
+  current: UiLocale;
+  /** Localised, because a screen reader in Azerbaijani should not
+      announce this control in English. */
+  label: string;
+  className?: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -29,7 +39,7 @@ export function LocaleSwitcher({ current, className }: { current: UiLocale; clas
     <div className={cn('relative inline-flex items-center', className)}>
       <Globe className="pointer-events-none absolute left-3 size-4 text-ink-faint" aria-hidden="true" />
       <select
-        aria-label="Interface language"
+        aria-label={label}
         value={current}
         disabled={pending}
         onChange={(event) => {

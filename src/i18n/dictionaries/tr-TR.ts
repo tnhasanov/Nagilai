@@ -18,6 +18,8 @@ export const trTR: Dictionary = {
     optional: 'isteğe bağlı',
     somethingWentWrong: 'Bir şeyler ters gitti. Lütfen tekrar deneyin.',
     credits: 'kredi',
+    menu: 'Menü',
+    interfaceLanguage: 'Arayüz dili',
     creditsLeft: '{count} kredi kaldı',
   },
   nav: {

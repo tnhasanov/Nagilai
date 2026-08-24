@@ -18,6 +18,8 @@ export const azAZ: Dictionary = {
     optional: 'istəyə bağlı',
     somethingWentWrong: 'Nəsə səhv getdi. Zəhmət olmasa yenidən cəhd edin.',
     credits: 'kredit',
+    menu: 'Menyu',
+    interfaceLanguage: 'İnterfeys dili',
     creditsLeft: '{count} kredit qalıb',
   },
   nav: {

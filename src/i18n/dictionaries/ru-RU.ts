@@ -18,6 +18,8 @@ export const ruRU: Dictionary = {
     optional: 'необязательно',
     somethingWentWrong: 'Что-то пошло не так. Попробуйте ещё раз.',
     credits: 'кредитов',
+    menu: 'Меню',
+    interfaceLanguage: 'Язык интерфейса',
     creditsLeft: 'Осталось кредитов: {count}',
   },
   nav: {

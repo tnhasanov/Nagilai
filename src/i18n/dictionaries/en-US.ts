@@ -20,6 +20,8 @@ export const enUS = {
     optional: 'optional',
     somethingWentWrong: 'Something went wrong. Please try again.',
     credits: 'credits',
+    menu: 'Menu',
+    interfaceLanguage: 'Interface language',
     creditsLeft: '{count} credits left',
   },
   nav: {

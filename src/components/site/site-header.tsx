@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils';
 import type { UiLocale } from '@/config/constants';
 
 export interface HeaderStrings {
+  /** From `common`, not `nav`: shared chrome labels. */
+  menu: string;
+  interfaceLanguage: string;
   library: string;
   create: string;
   children: string;
@@ -95,7 +98,7 @@ export function SiteHeader({
         <div className="ml-auto flex items-center gap-2">
           {isAuthenticated && creditBalance !== null ? (
             <span
-              className="hidden items-center gap-1.5 rounded-pill bg-amber-soft px-3 py-1.5 text-sm font-bold text-amber-deep sm:inline-flex"
+              className="inline-flex items-center gap-1.5 rounded-pill bg-amber-soft px-3 py-1.5 text-sm font-bold text-amber-deep"
               title={`${creditBalance} credits`}
             >
               <Sparkles className="size-3.5" aria-hidden="true" />
@@ -103,7 +106,7 @@ export function SiteHeader({
             </span>
           ) : null}
 
-          <LocaleSwitcher current={locale} className="hidden sm:inline-flex" />
+          <LocaleSwitcher current={locale} label={strings.interfaceLanguage} className="hidden sm:inline-flex" />
 
           {isAuthenticated ? (
             <div className="hidden items-center gap-1 md:flex">
@@ -139,7 +142,7 @@ export function SiteHeader({
             onClick={() => setMobileOpen((open) => !open)}
             className="rounded-pill p-2 text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink md:hidden"
             aria-expanded={mobileOpen}
-            aria-label="Menu"
+            aria-label={strings.menu}
           >
             {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
@@ -206,7 +209,7 @@ export function SiteHeader({
             )}
 
             <div className="pt-3">
-              <LocaleSwitcher current={locale} />
+              <LocaleSwitcher current={locale} label={strings.interfaceLanguage} />
             </div>
           </nav>
         </div>

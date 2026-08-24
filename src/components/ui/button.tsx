@@ -15,8 +15,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /* `action`, not `amber`: the accent and the fill are different
+           jobs and only one of them has to carry text. See globals.css. */
         primary:
-          'bg-amber text-white shadow-[0_2px_0_0_var(--color-amber-deep),0_10px_24px_-12px_rgba(217,126,40,0.7)] hover:bg-amber-deep active:shadow-[0_1px_0_0_var(--color-amber-deep)]',
+          'bg-action text-on-action shadow-[0_2px_0_0_var(--color-action-hover),0_10px_24px_-12px_rgba(217,126,40,0.7)] hover:bg-action-hover active:shadow-[0_1px_0_0_var(--color-action-hover)]',
         secondary:
           'bg-paper-raised text-ink border border-line-strong shadow-page hover:border-amber hover:text-amber-deep',
         ghost: 'text-ink-soft hover:bg-paper-sunken hover:text-ink',

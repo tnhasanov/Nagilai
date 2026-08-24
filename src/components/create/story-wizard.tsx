@@ -77,7 +77,14 @@ export function StoryWizard({
   creditBalance: number;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  /*
+   * Skip "who is it for?" when there is only one answer.
+   *
+   * The step is not removed — Back still reaches it, and a parent with a
+   * second child still starts there — but pressing Next past a single
+   * card that is already selected is a tap that asks nothing.
+   */
+  const [step, setStep] = useState(childProfiles.length === 1 ? 1 : 0);
   const [pending, startTransition] = useTransition();
 
   const [childId, setChildId] = useState(childProfiles[0]?.id ?? '');
