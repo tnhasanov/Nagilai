@@ -2,9 +2,8 @@ import 'server-only';
 
 import { AppError } from '@/lib/errors';
 import { createLogger, describeError } from '@/lib/logger';
-import { withRetry } from '@/lib/retry';
 import type { GeneratedStory, StoryRequest } from '@/types/domain';
-import { isRetryableOpenAiError, openaiClient } from './openai-client';
+import { callOpenAi, openaiClient } from './openai-client';
 import { buildSystemPrompt, buildUserPrompt, PROMPT_VERSION } from './prompts';
 import { generatedStorySchema, STORY_JSON_SCHEMA } from './schema';
 import type { ProviderResult, StoryGenerationOptions, TextProvider } from './types';
@@ -31,7 +30,7 @@ export class OpenAiTextProvider implements TextProvider {
     const user = buildUserPrompt(request);
     const startedAt = Date.now();
 
-    const response = await withRetry(
+    const response = await callOpenAi(
       () =>
         client.responses.create({
           model: options.model,
@@ -47,7 +46,7 @@ export class OpenAiTextProvider implements TextProvider {
             },
           },
         }),
-      { label: 'openai.responses.create', attempts: 3, isRetryable: isRetryableOpenAiError },
+      { label: 'openai.responses.create', attempts: 3 },
     );
 
     const durationMs = Date.now() - startedAt;

@@ -155,6 +155,20 @@ export async function complete(jobId: string, result?: Record<string, unknown>):
 }
 
 /**
+ * Whether a failure ends the job here, rather than earning another try.
+ *
+ * The handlers need this *before* `fail` runs, because refunding is their
+ * job and paying a parent back twice is worse than not paying them back
+ * at all. It answers the same question `fail` does, from the same two
+ * facts: an error the AppError layer marked non-retryable, or a job that
+ * has used its attempts.
+ */
+export function isPermanentFailure(job: GenerationJob, error: unknown): boolean {
+  const retryable = error instanceof AppError ? error.retryable : true;
+  return !retryable || job.attempts >= job.max_attempts;
+}
+
+/**
  * Records a failure and decides whether to retry.
  *
  * Backoff is exponential from 30 seconds. A job that exhausts its attempts

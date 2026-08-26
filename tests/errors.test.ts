@@ -178,3 +178,68 @@ describe('describeError', () => {
     expect(describeError(null)).toEqual({ value: 'null' });
   });
 });
+
+/**
+ * An exhausted OpenAI balance is not a rate limit.
+ *
+ * Written after a real story sat at "preparing" for a whole morning. The
+ * account had no credit; OpenAI says so with a 429, which is the same
+ * status a genuine rate limit uses. Classified as retryable, the job
+ * re-queued for hours, the parent watched a spinner, and the credit
+ * already charged for the story stayed charged — because the refund only
+ * fires on a permanent failure.
+ */
+describe('OpenAI quota exhaustion', () => {
+  class FakeApiError extends Error {
+    status: number;
+    code: string | null;
+    constructor(status: number, message: string, code: string | null = null) {
+      super(message);
+      this.status = status;
+      this.code = code;
+    }
+  }
+
+  it('is told apart from a genuine rate limit', async () => {
+    const { isQuotaExhausted } = await import('@/services/ai/openai-client');
+    const OpenAI = (await import('openai')).default;
+
+    const quota = Object.assign(
+      new OpenAI.APIError(429, undefined, 'You have no credits remaining.', undefined),
+      { code: 'insufficient_quota' },
+    );
+    const throttled = Object.assign(
+      new OpenAI.APIError(429, undefined, 'Rate limit reached for requests', undefined),
+      { code: 'rate_limit_exceeded' },
+    );
+
+    expect(isQuotaExhausted(quota)).toBe(true);
+    expect(isQuotaExhausted(throttled)).toBe(false);
+  });
+
+  it('ignores anything that is not a 429 from OpenAI', async () => {
+    const { isQuotaExhausted } = await import('@/services/ai/openai-client');
+
+    expect(isQuotaExhausted(new FakeApiError(429, 'no credits remaining'))).toBe(false);
+    expect(isQuotaExhausted(new Error('no credits remaining'))).toBe(false);
+    expect(isQuotaExhausted(null)).toBe(false);
+  });
+
+  it('stops the job on the first try, so the refund happens', async () => {
+    const { isPermanentFailure } = await import('@/services/jobs/queue');
+    const job = { attempts: 1, max_attempts: 3 } as Parameters<typeof isPermanentFailure>[0];
+
+    // Non-retryable: permanent immediately, however many attempts remain.
+    expect(isPermanentFailure(job, new AppError('not_configured', 'no balance'))).toBe(true);
+
+    // Retryable: still has attempts, so it earns another try.
+    expect(isPermanentFailure(job, new AppError('provider_unavailable', 'busy'))).toBe(false);
+
+    // An unclassified throw keeps the old benefit of the doubt...
+    expect(isPermanentFailure(job, new Error('who knows'))).toBe(false);
+    // ...until the attempts run out.
+    expect(
+      isPermanentFailure({ attempts: 3, max_attempts: 3 } as typeof job, new Error('who knows')),
+    ).toBe(true);
+  });
+});

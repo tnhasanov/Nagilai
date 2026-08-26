@@ -15,6 +15,7 @@ import { recomputeStatus } from '@/services/stories/status';
 import { STORAGE_BUCKETS } from '@/config/constants';
 import type { CharacterBible, GenerationJob } from '@/types/domain';
 import type { Json } from '@/types/database';
+import { isPermanentFailure } from '@/services/jobs/queue';
 
 /**
  * Generates one illustration -- a page or the cover (§8).
@@ -224,7 +225,7 @@ export async function handleIllustration(job: GenerationJob): Promise<Record<str
 
     return { illustrationId: rowId, bytes: result.value.bytes.byteLength };
   } catch (error) {
-    const permanent = job.attempts >= job.max_attempts;
+    const permanent = isPermanentFailure(job, error);
 
     await admin
       .from('story_illustrations')

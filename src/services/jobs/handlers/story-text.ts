@@ -11,7 +11,7 @@ import { checkText } from '@/services/safety';
 import * as credits from '@/services/credits';
 import { recordUsage } from '@/services/usage/tracker';
 import { markFailed, recomputeStatus, setStatus } from '@/services/stories/status';
-import { enqueueMany } from '@/services/jobs/queue';
+import { enqueueMany, isPermanentFailure } from '@/services/jobs/queue';
 import { capture } from '@/services/analytics';
 import { ANALYTICS_EVENTS } from '@/config/constants';
 import type { ChildSnapshot, GeneratedStory, StoryRequest } from '@/types/domain';
@@ -89,7 +89,10 @@ export async function handleStoryText(job: GenerationJob): Promise<Record<string
   } catch (error) {
     // Only refund once we know we will not retry -- a retryable failure
     // reuses the same idempotency key and must not be paid for twice.
-    if (job.attempts >= job.max_attempts) {
+    // "Will not retry" is not the same as "ran out of attempts": an error
+    // marked non-retryable stops here on the first try, and the parent's
+    // credit has to come back with it.
+    if (isPermanentFailure(job, error)) {
       await refundText(job, story.id);
       await markFailed(story.id, 'Story generation failed');
       await capture({

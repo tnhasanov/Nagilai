@@ -1,8 +1,7 @@
 import 'server-only';
 
 import { AppError } from '@/lib/errors';
-import { withRetry } from '@/lib/retry';
-import { isRetryableOpenAiError, openaiClient } from '@/services/ai/openai-client';
+import { callOpenAi, openaiClient } from '@/services/ai/openai-client';
 import type {
   IllustrationProvider,
   IllustrationRequest,
@@ -27,7 +26,7 @@ export class OpenAiIllustrationProvider implements IllustrationProvider {
       ? `${request.prompt}\n\nAvoid entirely: ${request.negativePrompt}`
       : request.prompt;
 
-    const response = await withRetry(
+    const response = await callOpenAi(
       () =>
         client.images.generate({
           model,
@@ -42,7 +41,7 @@ export class OpenAiIllustrationProvider implements IllustrationProvider {
           moderation: 'auto',
           ...(request.endUserId ? { user: request.endUserId } : {}),
         }),
-      { label: 'openai.images.generate', attempts: 3, isRetryable: isRetryableOpenAiError },
+      { label: 'openai.images.generate', attempts: 3 },
     );
 
     const image = response.data?.[0];

@@ -1,8 +1,7 @@
 import 'server-only';
 
 import { createLogger, describeError } from '@/lib/logger';
-import { isRetryableOpenAiError, openaiClient } from './openai-client';
-import { withRetry } from '@/lib/retry';
+import { callOpenAi, openaiClient } from './openai-client';
 import type { ModerationProvider, ModerationVerdict, ProviderResult } from './types';
 
 const log = createLogger('ai:moderation');
@@ -29,9 +28,9 @@ export class OpenAiModerationProvider implements ModerationProvider {
     const client = openaiClient();
 
     try {
-      const response = await withRetry(
+      const response = await callOpenAi(
         () => client.moderations.create({ model, input: text.slice(0, 20_000) }),
-        { label: 'openai.moderations.create', attempts: 2, isRetryable: isRetryableOpenAiError },
+        { label: 'openai.moderations.create', attempts: 2 },
       );
 
       const result = response.results[0];

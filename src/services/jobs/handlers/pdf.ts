@@ -11,6 +11,7 @@ import { bookStringsFor } from '@/services/pdf/book-strings';
 import type { PageSizeName } from '@/services/pdf/layout';
 import { STORAGE_BUCKETS } from '@/config/constants';
 import type { GenerationJob } from '@/types/domain';
+import { isPermanentFailure } from '@/services/jobs/queue';
 
 /**
  * Renders a story into a downloadable or print-ready PDF (§14).
@@ -180,7 +181,7 @@ export async function handlePdf(job: GenerationJob): Promise<Record<string, unkn
 
     return { pdfId: rowId, storagePath: path, pageCount: rendered.pageCount };
   } catch (error) {
-    const permanent = job.attempts >= job.max_attempts;
+    const permanent = isPermanentFailure(job, error);
 
     await admin
       .from('story_pdfs')

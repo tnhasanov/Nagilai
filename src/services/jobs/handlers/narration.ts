@@ -14,6 +14,7 @@ import { capture } from '@/services/analytics';
 import { ANALYTICS_EVENTS, STORAGE_BUCKETS } from '@/config/constants';
 import type { GenerationJob, NarrationTiming } from '@/types/domain';
 import type { Json } from '@/types/database';
+import { isPermanentFailure } from '@/services/jobs/queue';
 
 /**
  * Narration (§10).
@@ -167,7 +168,7 @@ export async function handleNarration(job: GenerationJob): Promise<Record<string
 
     return { narrationId: rowId, seconds: result.value.durationSeconds };
   } catch (error) {
-    const permanent = job.attempts >= job.max_attempts;
+    const permanent = isPermanentFailure(job, error);
 
     await admin
       .from('narrations')

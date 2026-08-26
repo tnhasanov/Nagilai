@@ -1,8 +1,7 @@
 import 'server-only';
 
 import { AppError } from '@/lib/errors';
-import { withRetry } from '@/lib/retry';
-import { isRetryableOpenAiError, openaiClient } from '@/services/ai/openai-client';
+import { callOpenAi, openaiClient } from '@/services/ai/openai-client';
 import type { ProviderResult, SpeechProvider, SpeechRequest, SpeechResult } from '@/services/ai/types';
 
 const MIME_BY_FORMAT: Record<SpeechRequest['format'], string> = {
@@ -31,7 +30,7 @@ export class OpenAiSpeechProvider implements SpeechProvider {
       throw new AppError('validation_failed', 'Cannot synthesise empty text');
     }
 
-    const response = await withRetry(
+    const response = await callOpenAi(
       () =>
         client.audio.speech.create({
           model,
@@ -41,7 +40,7 @@ export class OpenAiSpeechProvider implements SpeechProvider {
           ...(request.instructions ? { instructions: request.instructions } : {}),
           ...(request.speed && request.speed !== 1 ? { speed: request.speed } : {}),
         }),
-      { label: 'openai.audio.speech.create', attempts: 3, isRetryable: isRetryableOpenAiError },
+      { label: 'openai.audio.speech.create', attempts: 3 },
     );
 
     const bytes = new Uint8Array(await response.arrayBuffer());
