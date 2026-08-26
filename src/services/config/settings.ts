@@ -27,6 +27,19 @@ const creditsSchema = z.object({
 
 const modelsSchema = z.object({
   text: z.string().default('gpt-5'),
+  /**
+   * How hard the text model thinks before writing.
+   *
+   * `gpt-5` is a reasoning model and defaults to spending real time
+   * deliberating — which for a children's bedtime story buys very little
+   * and costs both money and, on a serverless host with a sixty-second
+   * ceiling, the entire request. Writing a story is a creative task, not
+   * a deductive one. Raise it here if the stories ever feel thin; it is
+   * a row in `app_settings`, not a deployment.
+   */
+  text_reasoning_effort: z
+    .enum(['none', 'minimal', 'low', 'medium', 'high'])
+    .default('low'),
   text_fallback: z.string().default('gpt-5-mini'),
   image: z.string().default('gpt-image-1'),
   image_size: z.string().default('1024x1024'),

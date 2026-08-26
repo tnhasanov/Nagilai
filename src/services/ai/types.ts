@@ -37,6 +37,8 @@ export interface StoryGenerationOptions {
   maxOutputTokens: number;
   targetPages: number;
   wordsPerPage: number;
+  /** Only meaningful for a reasoning model; omitted for the rest. */
+  reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high';
 }
 
 export interface TextProvider {

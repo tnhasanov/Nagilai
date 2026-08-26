@@ -75,6 +75,7 @@ export async function handleStoryText(job: GenerationJob): Promise<Record<string
       maxOutputTokens: spec.maxOutputTokens,
       targetPages: spec.pages,
       wordsPerPage: spec.wordsPerPage,
+      reasoningEffort: models.text_reasoning_effort,
     });
     generated = result.value;
 

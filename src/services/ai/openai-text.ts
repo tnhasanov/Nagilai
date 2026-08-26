@@ -37,6 +37,7 @@ export class OpenAiTextProvider implements TextProvider {
           instructions: system,
           input: [{ role: 'user', content: user }],
           max_output_tokens: options.maxOutputTokens,
+          ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort } } : {}),
           text: {
             format: {
               type: 'json_schema',
