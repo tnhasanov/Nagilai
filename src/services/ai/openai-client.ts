@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { AppError } from '@/lib/errors';
 import { withRetry } from '@/lib/retry';
 import { serverEnv } from '@/config/env';
+import { WORKER_DEFAULTS } from '@/config/constants';
 
 /**
  * The single place the OpenAI SDK is constructed.
@@ -22,7 +23,10 @@ export function openaiClient(): OpenAI {
   cached = new OpenAI({
     apiKey: env.OPENAI_API_KEY,
     ...(env.OPENAI_BASE_URL ? { baseURL: env.OPENAI_BASE_URL } : {}),
-    timeout: 1000 * 240,
+    // Bounded by the worker's budget, not the SDK's four-minute default:
+    // a call that outlives the serverless function takes the function
+    // down with it and leaves the job locked. See WORKER_DEFAULTS.
+    timeout: WORKER_DEFAULTS.providerTimeoutMs,
     maxRetries: 0, // retries are handled by `withRetry` so they are logged
   });
   return cached;

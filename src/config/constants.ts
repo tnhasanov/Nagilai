@@ -81,6 +81,19 @@ export const WORKER_DEFAULTS = {
    * cannot invoke the worker forever; the work is durable either way.
    */
   maxContinuations: 20,
+  /**
+   * How long a single provider call may take.
+   *
+   * Must stay *below* `timeBudgetMs`, and therefore below the host's
+   * function limit. The OpenAI SDK defaulted to four minutes here, which
+   * on a sixty-second serverless function means the platform kills the
+   * whole invocation mid-call: the job stays locked with `status =
+   * 'running'`, the story stays at "writing the story", and nothing
+   * fails, retries or reports — it just stops, until a later worker run
+   * reaps it as stalled. A call that overruns should end as a clean,
+   * retryable timeout inside our own process, where it can be recorded.
+   */
+  providerTimeoutMs: 40_000,
 } as const;
 
 /** Product analytics event names (§19). */
